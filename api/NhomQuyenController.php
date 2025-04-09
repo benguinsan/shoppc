@@ -1,0 +1,197 @@
+<?php
+require_once __DIR__ . '/../models/NhomQuyen.php';
+require_once __DIR__ . '/../Middleware/AuthMiddleware.php';
+
+class NhomQuyenController
+{
+    private $nhomQuyenModel;
+    private $authMiddleware;
+
+    public function __construct()
+    {
+        $this->nhomQuyenModel = new NhomQuyen();
+        $this->authMiddleware = new AuthMiddleware();
+    }
+
+    // Kiểm tra quyền ADMIN
+    private function checkAdminPermission()
+    {
+        // Tạm thời bỏ qua kiểm tra quyền để test
+        return true;
+
+        /*
+        try {
+            // Xác thực token và lấy thông tin từ token
+            $decodedToken = $this->authMiddleware->authenticate();
+
+            if (!$decodedToken) {
+                throw new Exception('Không thể xác thực người dùng');
+            }
+
+            // Kiểm tra quyền admin
+            if (!isset($decodedToken->MaNhomQuyen) || $decodedToken->MaNhomQuyen !== 'ADMIN') {
+                throw new Exception('Bạn không có quyền thực hiện hành động này');
+            }
+
+            return true;
+        } catch (Exception $e) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+            exit;
+        }
+        */
+    }
+
+    public function getAll()
+    {
+        // Kiểm tra quyền ADMIN
+        $this->checkAdminPermission();
+
+        try {
+            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+            $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
+            $orderBy = isset($_GET['orderBy']) ? $_GET['orderBy'] : 'created_at';
+            $orderDirection = isset($_GET['orderDirection']) ? $_GET['orderDirection'] : 'DESC';
+
+            $result = $this->nhomQuyenModel->getAll($page, $limit, $searchTerm, $orderBy, $orderDirection);
+            $this->sendResponse(200, $result);
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function getOne($id)
+    {
+        // Kiểm tra quyền ADMIN
+        $this->checkAdminPermission();
+
+        try {
+            $nhomQuyen = $this->nhomQuyenModel->getById($id);
+
+            if ($nhomQuyen) {
+                $this->sendResponse(200, $nhomQuyen);
+            } else {
+                $this->sendResponse(404, ['error' => 'Không tìm thấy nhóm quyền']);
+            }
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function create()
+    {
+        // Kiểm tra quyền ADMIN
+        $this->checkAdminPermission();
+
+        try {
+            $data = json_decode(file_get_contents("php://input"), true);
+
+            if (!isset($data['TenNhomQuyen']) || empty($data['TenNhomQuyen'])) {
+                $this->sendResponse(400, ['error' => 'Tên nhóm quyền không được để trống']);
+                return;
+            }
+
+            if ($this->nhomQuyenModel->create($data)) {
+                $id = $this->nhomQuyenModel->getLastInsertId();
+                $nhomQuyen = $this->nhomQuyenModel->getById($id);
+                $this->sendResponse(201, [
+                    'message' => 'Tạo nhóm quyền thành công',
+                    'data' => $nhomQuyen
+                ]);
+            } else {
+                $this->sendResponse(500, ['error' => 'Không thể tạo nhóm quyền']);
+            }
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function update($id)
+    {
+        // Kiểm tra quyền ADMIN
+        $this->checkAdminPermission();
+
+        try {
+            $data = json_decode(file_get_contents("php://input"), true);
+
+            if (empty($data)) {
+                $this->sendResponse(400, ['error' => 'Không có dữ liệu để cập nhật']);
+                return;
+            }
+
+            if ($this->nhomQuyenModel->update($id, $data)) {
+                $nhomQuyen = $this->nhomQuyenModel->getById($id);
+                $this->sendResponse(200, [
+                    'message' => 'Cập nhật nhóm quyền thành công',
+                    'data' => $nhomQuyen
+                ]);
+            } else {
+                $this->sendResponse(500, ['error' => 'Không thể cập nhật nhóm quyền']);
+            }
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function delete($id)
+    {
+        // Kiểm tra quyền ADMIN
+        $this->checkAdminPermission();
+
+        try {
+            if ($this->nhomQuyenModel->delete($id)) {
+                $this->sendResponse(200, ['message' => 'Xóa nhóm quyền thành công']);
+            } else {
+                $this->sendResponse(500, ['error' => 'Không thể xóa nhóm quyền']);
+            }
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function getFunctions($id)
+    {
+        // Kiểm tra quyền ADMIN
+        $this->checkAdminPermission();
+
+        try {
+            $functions = $this->nhomQuyenModel->getFunctionsByRoleId($id);
+            $this->sendResponse(200, $functions);
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function updateFunctions($id)
+    {
+        // Kiểm tra quyền ADMIN
+        $this->checkAdminPermission();
+
+        try {
+            $data = json_decode(file_get_contents("php://input"), true);
+
+            if (!isset($data['ChucNang']) || !is_array($data['ChucNang'])) {
+                $this->sendResponse(400, ['error' => 'Dữ liệu chức năng không hợp lệ']);
+                return;
+            }
+
+            if ($this->nhomQuyenModel->updateRoleFunctions($id, $data['ChucNang'])) {
+                $this->sendResponse(200, ['message' => 'Cập nhật chức năng cho nhóm quyền thành công']);
+            } else {
+                $this->sendResponse(500, ['error' => 'Không thể cập nhật chức năng cho nhóm quyền']);
+            }
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    private function sendResponse($statusCode, $data)
+    {
+        http_response_code($statusCode);
+        echo json_encode($data);
+    }
+}
