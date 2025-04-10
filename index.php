@@ -5,7 +5,8 @@ require_once './api/NguoiDungController.php';
 require_once './api/NhomQuyenController.php';
 require_once './api/ChucNangController.php';
 require_once './api/NhaCungCapController.php';
-
+require_once './api/LoaiSanPhamController.php';
+require_once './api/taikhoan/TaiKhoanController.php';
 // Thiết lập header JSON
 header("Content-Type: application/json");
 
@@ -27,6 +28,9 @@ $nguoiDungController = new NguoiDungController();
 $nhomQuyenController = new NhomQuyenController();
 $chucNangController = new ChucNangController();
 $nhaCungCapController = new NhaCungCapController();
+$loaiSanPhamController = new LoaiSanPhamController();
+$taiKhoanController = new TaiKhoanController();
+
 
 error_log($_SERVER['REQUEST_URI']);
 
@@ -68,6 +72,59 @@ switch ($apiPath) {
             $nguoiDungController->getCurrentUser();
         } else if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
             $nguoiDungController->updateCurrentUser();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // nguoi dung tu doi mat khau
+    case '/user/password':
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $taiKhoanController->updatePassword();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // nguoi dung tu vo hieu/kich hoat tai khoan co the khong can thiet
+    case '/user/deactivate':
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $taiKhoanController->deactivateOwnAccount();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/accounts':
+        if ($requestMethod === 'GET') {
+            $taiKhoanController->getAllAccounts();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/accounts/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maTaiKhoan = $matches[1];
+
+        if ($requestMethod === 'GET') {
+            $taiKhoanController->getAccountById($maTaiKhoan);
+        } else if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $taiKhoanController->updateAccount($maTaiKhoan);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/accounts/([^/]+)/role$#', $apiPath, $matches) ? true : false):
+        $maTaiKhoan = $matches[1];
+
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $taiKhoanController->updateAccountRole($maTaiKhoan);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -124,7 +181,7 @@ switch ($apiPath) {
         }
         break;
 
-    case (preg_match('#^/nhomquyen/([^/]+)/functions$#', $apiPath, $matches) ? true : false):
+    case (preg_match('#^/nhomquyen/([^/]+)/chucnang$#', $apiPath, $matches) ? true : false):
         $maNhomQuyen = $matches[1];
 
         if ($requestMethod === 'GET') {
@@ -191,6 +248,32 @@ switch ($apiPath) {
         }
         break;
 
+    // loai san pham route
+    case '/loaisanpham':
+        if ($requestMethod === 'GET') {
+            $loaiSanPhamController->getAll();
+        } else if ($requestMethod === 'POST') {
+            $loaiSanPhamController->create();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/loaisanpham/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maLoaiSanPham = $matches[1];
+
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $loaiSanPhamController->update($maLoaiSanPham);
+        } else if ($requestMethod === 'DELETE') {
+            $loaiSanPhamController->delete($maLoaiSanPham);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    
 
 
 

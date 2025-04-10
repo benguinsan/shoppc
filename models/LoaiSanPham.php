@@ -95,7 +95,7 @@ class LoaiSanPham
         }
     }
 
-    public function getById($id)
+    public function getById($maLoaiSP)
     {
         if ($this->conn === null) {
             throw new Exception("Kết nối database không khả dụng");
@@ -104,7 +104,7 @@ class LoaiSanPham
         try {
             $query = "SELECT * FROM " . $this->table_name . " WHERE MaLoaiSP = :MaLoaiSP";
             $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(":MaLoaiSP", $id);
+            $stmt->bindParam(":MaLoaiSP", $maLoaiSP);
             $stmt->execute();
 
             return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -160,7 +160,7 @@ class LoaiSanPham
         }
     }
 
-    public function update($id, $data)
+    public function update($maLoaiSP, $data)
     {
         if ($this->conn === null) {
             throw new Exception("Kết nối database không khả dụng");
@@ -168,7 +168,7 @@ class LoaiSanPham
 
         try {
             // Kiểm tra xem loại sản phẩm có tồn tại không
-            $loaiSanPham = $this->getById($id);
+            $loaiSanPham = $this->getById($maLoaiSP);
             if (!$loaiSanPham) {
                 throw new Exception("Không tìm thấy loại sản phẩm");
             }
@@ -188,8 +188,12 @@ class LoaiSanPham
             }
 
             if (isset($data['TrangThai'])) {
+                // Chỉ cho phép giá trị 0 hoặc 1
+                if ($data['TrangThai'] !== 0 && $data['TrangThai'] !== 1) {
+                    throw new Exception("Trạng thái không hợp lệ. Chỉ chấp nhận giá trị 0 (vô hiệu hóa) hoặc 1 (kích hoạt)");
+                }
                 $updateFields[] = "TrangThai = :TrangThai";
-                $params[':TrangThai'] = (int)$data['TrangThai'];
+                $params[':TrangThai'] = $data['TrangThai'];
             }
 
             // Nếu không có trường nào được cập nhật
@@ -198,7 +202,7 @@ class LoaiSanPham
             }
 
             $query = "UPDATE " . $this->table_name . " SET " . implode(", ", $updateFields) . " WHERE MaLoaiSP = :MaLoaiSP";
-            $params[':MaLoaiSP'] = $id;
+            $params[':MaLoaiSP'] = $maLoaiSP;
 
             $stmt = $this->conn->prepare($query);
             foreach ($params as $key => $value) {
@@ -213,7 +217,7 @@ class LoaiSanPham
         }
     }
 
-    public function delete($id)
+    public function delete($maLoaiSP)
     {
         if ($this->conn === null) {
             throw new Exception("Kết nối database không khả dụng");
@@ -221,7 +225,7 @@ class LoaiSanPham
 
         try {
             // Kiểm tra xem loại sản phẩm có tồn tại không
-            $loaiSanPham = $this->getById($id);
+            $loaiSanPham = $this->getById($maLoaiSP);
             if (!$loaiSanPham) {
                 throw new Exception("Không tìm thấy loại sản phẩm");
             }
@@ -231,7 +235,7 @@ class LoaiSanPham
 
             $query = "DELETE FROM " . $this->table_name . " WHERE MaLoaiSP = :MaLoaiSP";
             $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(":MaLoaiSP", $id);
+            $stmt->bindParam(":MaLoaiSP", $maLoaiSP);
             $stmt->execute();
 
             return true;

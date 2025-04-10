@@ -13,38 +13,62 @@ class ChucNangController
         $this->authMiddleware = new AuthMiddleware();
     }
 
-    // Kiểm tra quyền ADMIN
-    private function checkAdminPermission()
+    // Kiểm tra quyền
+    private function checkPermission($requiredPermission = 'ADMIN')
     {
+        // Tạm thời bỏ qua kiểm tra quyền để test
         return true;
-        // try {
-        //     // Xác thực token và lấy thông tin từ token
-        //     $decodedToken = $this->authMiddleware->authenticate();
 
-        //     if (!$decodedToken) {
-        //         throw new Exception('Không thể xác thực người dùng');
-        //     }
+        /*
+        try {
+            // Xác thực token và lấy thông tin từ token
+            $decodedToken = $this->authMiddleware->authenticate();
 
-        //     // Kiểm tra quyền admin
-        //     if (!isset($decodedToken->MaNhomQuyen) || $decodedToken->MaNhomQuyen !== 'ADMIN') {
-        //         throw new Exception('Bạn không có quyền thực hiện hành động này');
-        //     }
+            if (!$decodedToken) {
+                throw new Exception('Không thể xác thực người dùng');
+            }
 
-        //     return true;
-        // } catch (Exception $e) {
-        //     http_response_code(403);
-        //     echo json_encode([
-        //         'success' => false,
-        //         'error' => $e->getMessage()
-        //     ]);
-        //     exit;
-        // }
+            // Kiểm tra quyền
+            if (!isset($decodedToken->MaNhomQuyen)) {
+                throw new Exception('Không tìm thấy thông tin quyền người dùng');
+            }
+            
+            // Kiểm tra xem người dùng có quyền yêu cầu không
+            $userPermission = $decodedToken->MaNhomQuyen;
+            
+            // Danh sách các quyền được phép
+            $allowedPermissions = [];
+            
+            // Nếu yêu cầu quyền ADMIN
+            if ($requiredPermission === 'ADMIN') {
+                $allowedPermissions = ['ADMIN'];
+            } 
+            // Nếu yêu cầu quyền QLCN (Quản lý chức năng)
+            else if ($requiredPermission === 'QLCN') {
+                $allowedPermissions = ['ADMIN', 'QLCN'];
+            }
+            // Thêm các trường hợp khác nếu cần
+            
+            if (!in_array($userPermission, $allowedPermissions)) {
+                throw new Exception('Bạn không có quyền thực hiện hành động này');
+            }
+
+            return true;
+        } catch (Exception $e) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+            exit;
+        }
+        */
     }
 
     public function getAll()
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -60,13 +84,13 @@ class ChucNangController
         }
     }
 
-    public function getOne($id)
+    public function getOne($maChucNang)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
-            $chucNang = $this->chucNangModel->getById($id);
+            $chucNang = $this->chucNangModel->getById($maChucNang);
 
             if ($chucNang) {
                 $this->sendResponse(200, $chucNang);
@@ -80,8 +104,8 @@ class ChucNangController
 
     public function create()
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             $data = json_decode(file_get_contents("php://input"), true);
@@ -92,8 +116,8 @@ class ChucNangController
             }
 
             if ($this->chucNangModel->create($data)) {
-                $id = $this->chucNangModel->getLastInsertId();
-                $chucNang = $this->chucNangModel->getById($id);
+                $maChucNang = $this->chucNangModel->getLastInsertId();
+                $chucNang = $this->chucNangModel->getById($maChucNang);
                 $this->sendResponse(201, [
                     'message' => 'Tạo chức năng thành công',
                     'data' => $chucNang
@@ -106,10 +130,10 @@ class ChucNangController
         }
     }
 
-    public function update($id)
+    public function update($maChucNang)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             $data = json_decode(file_get_contents("php://input"), true);
@@ -119,8 +143,8 @@ class ChucNangController
                 return;
             }
 
-            if ($this->chucNangModel->update($id, $data)) {
-                $chucNang = $this->chucNangModel->getById($id);
+            if ($this->chucNangModel->update($maChucNang, $data)) {
+                $chucNang = $this->chucNangModel->getById($maChucNang);
                 $this->sendResponse(200, [
                     'message' => 'Cập nhật chức năng thành công',
                     'data' => $chucNang
@@ -133,13 +157,13 @@ class ChucNangController
         }
     }
 
-    public function delete($id)
+    public function delete($maChucNang)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
-            if ($this->chucNangModel->delete($id)) {
+            if ($this->chucNangModel->delete($maChucNang)) {
                 $this->sendResponse(200, ['message' => 'Xóa chức năng thành công']);
             } else {
                 $this->sendResponse(500, ['error' => 'Không thể xóa chức năng']);
