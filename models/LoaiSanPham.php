@@ -26,7 +26,7 @@ class LoaiSanPham
         }
     }
 
-    public function getAll($page = 1, $limit = 10, $searchTerm = '', $orderBy = 'created_at', $orderDirection = 'DESC')
+    public function getAll($page = 1, $limit = 10, $searchTerm = '', $orderDirection = 'DESC')
     {
         if ($this->conn === null) {
             throw new Exception("Kết nối database không khả dụng");
@@ -42,10 +42,7 @@ class LoaiSanPham
                 $orderDirection = 'DESC';
             }
 
-            $validColumns = ['MaLoaiSP', 'TenLoaiSP', 'MoTa', 'TrangThai', 'created_at'];
-            if (!in_array($orderBy, $validColumns)) {
-                $orderBy = 'created_at';
-            }
+            $orderBy = 'MaLoaiSP'; // Mặc định sắp xếp theo MaLoaiSP
 
             $query = "SELECT * FROM " . $this->table_name;
             $countQuery = "SELECT COUNT(*) as total FROM " . $this->table_name;
@@ -137,7 +134,7 @@ class LoaiSanPham
             }
 
             $query = "INSERT INTO " . $this->table_name . " 
-                      SET MaLoaiSP=:MaLoaiSP, TenLoaiSP=:TenLoaiSP, MoTa=:MoTa, TrangThai=:TrangThai";
+                      SET MaLoaiSP=:MaLoaiSP, TenLoaiSP=:TenLoaiSP, MoTa=:MoTa";
 
             $stmt = $this->conn->prepare($query);
 
@@ -147,8 +144,6 @@ class LoaiSanPham
             $stmt->bindParam(":MaLoaiSP", $maLoaiSP);
             $stmt->bindParam(":TenLoaiSP", $data['TenLoaiSP']);
             $stmt->bindParam(":MoTa", $moTa);
-            $trangThai = isset($data['TrangThai']) ? (int)$data['TrangThai'] : 1;
-            $stmt->bindParam(":TrangThai", $trangThai);
 
             $stmt->execute();
             $this->lastInsertedId = $maLoaiSP;
@@ -185,15 +180,6 @@ class LoaiSanPham
             if (isset($data['MoTa'])) {
                 $updateFields[] = "MoTa = :MoTa";
                 $params[':MoTa'] = htmlspecialchars(strip_tags($data['MoTa']));
-            }
-
-            if (isset($data['TrangThai'])) {
-                // Chỉ cho phép giá trị 0 hoặc 1
-                if ($data['TrangThai'] !== 0 && $data['TrangThai'] !== 1) {
-                    throw new Exception("Trạng thái không hợp lệ. Chỉ chấp nhận giá trị 0 (vô hiệu hóa) hoặc 1 (kích hoạt)");
-                }
-                $updateFields[] = "TrangThai = :TrangThai";
-                $params[':TrangThai'] = $data['TrangThai'];
             }
 
             // Nếu không có trường nào được cập nhật

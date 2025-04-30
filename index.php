@@ -12,8 +12,9 @@ header("Content-Type: application/json");
 
 // Xử lý CORS (cho phép truy cập từ các domain khác)
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Credentials: true");
 
 // Xử lý preflight request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -42,7 +43,7 @@ $requestMethod = $_SERVER['REQUEST_METHOD'];
 error_log($requestUri);
 
 // Xác định base path của API
-$basePath = '/shop_pc/api'; // Sửa lại base path cho đúng
+$basePath = '/shoppc/api'; // Sửa lại base path cho đúng
 $apiPath = str_replace($basePath, '', $requestUri);
 
 error_log("API Path: " . $apiPath);
@@ -248,6 +249,14 @@ switch ($apiPath) {
         }
         break;
 
+    // Xóa mềm nhà cung cấp
+    case (preg_match('#^/nhacungcap/([^/]+)/soft-delete$#', $apiPath, $matches) && $requestMethod === 'PUT'):
+        $nhaCungCapController->softDelete($matches[1]);
+        break;
+    // Khôi phục nhà cung cấp
+    case (preg_match('#^/nhacungcap/([^/]+)/restore$#', $apiPath, $matches) && $requestMethod === 'PUT'):
+        $nhaCungCapController->restore($matches[1]);
+        break;
     // loai san pham route
     case '/loaisanpham':
         if ($requestMethod === 'GET') {
@@ -272,11 +281,6 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-
-    
-
-
-
 
     default:
         http_response_code(404);

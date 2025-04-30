@@ -26,7 +26,7 @@ class NhaCungCap
         }
     }
 
-    public function getAll($page = 1, $limit = 10, $searchTerm = '', $orderBy = 'created_at', $orderDirection = 'DESC')
+    public function getAll($page = 1, $limit = 10, $searchTerm = '', $orderBy = 'MaNCC', $orderDirection = 'DESC', $trangThai = null)
     {
         if ($this->conn === null) {
             throw new Exception("Kết nối database không khả dụng");
@@ -42,34 +42,48 @@ class NhaCungCap
                 $orderDirection = 'DESC';
             }
 
-            $validColumns = ['MaNCC', 'TenNCC', 'DiaChi', 'SDT', 'Email', 'TrangThai', 'created_at'];
+            $validColumns = ['MaNCC', 'TenNCC', 'DiaChi', 'SDT', 'Email', 'TrangThai'];
             if (!in_array($orderBy, $validColumns)) {
-                $orderBy = 'created_at';
+                $orderBy = 'MaNCC'; // Mặc định sắp xếp theo MaNCC nếu không hợp lệ
             }
 
             $query = "SELECT * FROM " . $this->table_name;
             $countQuery = "SELECT COUNT(*) as total FROM " . $this->table_name;
             $params = [];
+            $whereClause = [];
 
             if (!empty($searchTerm)) {
-                $query .= " WHERE TenNCC LIKE :searchTerm OR DiaChi LIKE :searchTerm OR SDT LIKE :searchTerm OR Email LIKE :searchTerm";
-                $countQuery .= " WHERE TenNCC LIKE :searchTerm OR DiaChi LIKE :searchTerm OR SDT LIKE :searchTerm OR Email LIKE :searchTerm";
+                $whereClause[] = "(TenNCC LIKE :searchTerm OR DiaChi LIKE :searchTerm OR SDT LIKE :searchTerm OR Email LIKE :searchTerm)";
                 $params[':searchTerm'] = "%$searchTerm%";
+            }
+
+            // Thêm điều kiện lọc theo trạng thái
+            if ($trangThai !== null) {
+                $whereClause[] = "TrangThai = :trangThai";
+                $params[':trangThai'] = (int)$trangThai;
+            }
+
+            // Ghép các điều kiện WHERE
+            if (!empty($whereClause)) {
+                $query .= " WHERE " . implode(" AND ", $whereClause);
+                $countQuery .= " WHERE " . implode(" AND ", $whereClause);
             }
 
             $query .= " ORDER BY " . $orderBy . " " . $orderDirection;
             $query .= " LIMIT :limit OFFSET :offset";
 
             $countStmt = $this->conn->prepare($countQuery);
-            if (!empty($searchTerm)) {
-                $countStmt->bindParam(':searchTerm', $params[':searchTerm']);
+            foreach ($params as $key => $value) {
+                if ($key !== ':limit' && $key !== ':offset') {
+                    $countStmt->bindValue($key, $value);
+                }
             }
             $countStmt->execute();
             $totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
 
             $stmt = $this->conn->prepare($query);
-            if (!empty($searchTerm)) {
-                $stmt->bindParam(':searchTerm', $params[':searchTerm']);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
             }
             $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
@@ -280,6 +294,59 @@ class NhaCungCap
             // Nếu có lỗi, sử dụng phương pháp dự phòng
             error_log("Lỗi tạo mã nhà cung cấp tự động: " . $e->getMessage());
             return 'NCC' . date('ymd') . rand(100, 999);
+        }
+    }
+
+    public function softDelete($id)
+    {
+        if ($this->conn === null) {
+            throw new Exception("Kết nối database không khả dụng");
+        }
+
+        try {
+            // Kiểm tra xem nhà cung cấp có tồn tại không
+            $nhaCungCap = $this->getById($id);
+            if (!$nhaCungCap) {
+                throw new Exception("Không tìm thấy nhà cung cấp");
+            }
+
+            // Cập nhật trạng thái thành không hoạt động (0)
+            $query = "UPDATE " . $this->table_name . " SET TrangThai = 0 WHERE MaNCC = :MaNCC";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaNCC", $id);
+            $stmt->execute();
+
+            return true;
+        } catch (PDOException $e) {
+            error_log("Lỗi xóa mềm nhà cung cấp: " . $e->getMessage());
+            throw new Exception("Không thể xóa mềm nhà cung cấp: " . $e->getMessage());
+        }
+    }
+
+    // Thêm phương thức restore để khôi phục nhà cung cấp đã xóa mềm
+    public function restore($id)
+    {
+        if ($this->conn === null) {
+            throw new Exception("Kết nối database không khả dụng");
+        }
+
+        try {
+            // Kiểm tra xem nhà cung cấp có tồn tại không
+            $nhaCungCap = $this->getById($id);
+            if (!$nhaCungCap) {
+                throw new Exception("Không tìm thấy nhà cung cấp");
+            }
+
+            // Cập nhật trạng thái thành hoạt động (1)
+            $query = "UPDATE " . $this->table_name . " SET TrangThai = 1 WHERE MaNCC = :MaNCC";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaNCC", $id);
+            $stmt->execute();
+
+            return true;
+        } catch (PDOException $e) {
+            error_log("Lỗi khôi phục nhà cung cấp: " . $e->getMessage());
+            throw new Exception("Không thể khôi phục nhà cung cấp: " . $e->getMessage());
         }
     }
 }

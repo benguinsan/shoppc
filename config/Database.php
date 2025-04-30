@@ -2,7 +2,7 @@
 class Database {
   private $host = 'localhost';
   private $db = 'shop_pc';
-  private $port = 3307; // Thêm port nếu cần
+  private $port = 3306; // Thêm port nếu cần
   private $user = 'root';
   private $password = '';
   public $conn;
