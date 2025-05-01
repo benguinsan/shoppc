@@ -100,4 +100,57 @@ class ChiTietHoaDonController {
             ]);
         }
     }
+    
+    public function create() {
+        try {
+            // Xác thực người dùng
+            $userData = $this->authMiddleware->authenticate();
+            
+            // Lấy dữ liệu từ body request
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$data) {
+                throw new Exception("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
+            }
+            
+            // Validate dữ liệu
+            $this->validateCreateData($data);
+            
+            // Gọi model để tạo chi tiết hóa đơn
+            $result = $this->chiTietHoaDonModel->create($data);
+            
+            // Trả về response
+            http_response_code(201);
+            echo json_encode([
+                'status' => 'success',
+                'data' => [
+                    'MaCTHD' => $result['id'],
+                    'message' => $result['message']
+                ]
+            ]);
+            
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    private function validateCreateData($data) {
+        // Kiểm tra các trường bắt buộc
+        $requiredFields = ['MaHD', 'MaSP', 'MaSeri', 'DonGia'];
+        
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                throw new Exception("Trường {$field} là bắt buộc.");
+            }
+        }
+        
+        // Kiểm tra đơn giá
+        if (!is_numeric($data['DonGia']) || (float)$data['DonGia'] <= 0) {
+            throw new Exception("Đơn giá phải là số dương.");
+        }
+    }
 } 
