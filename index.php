@@ -7,12 +7,13 @@ require_once './api/ChucNangController.php';
 require_once './api/NhaCungCapController.php';
 require_once './api/LoaiSanPhamController.php';
 require_once './api/taikhoan/TaiKhoanController.php';
+require_once './api/SanPhamController.php';
 // Thiết lập header JSON
 header("Content-Type: application/json");
 
 // Xử lý CORS (cho phép truy cập từ các domain khác)
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Methods: POST,PUT,DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
 // Xử lý preflight request
@@ -30,6 +31,7 @@ $chucNangController = new ChucNangController();
 $nhaCungCapController = new NhaCungCapController();
 $loaiSanPhamController = new LoaiSanPhamController();
 $taiKhoanController = new TaiKhoanController();
+$sanphamController = new SanPhamController();
 
 
 error_log($_SERVER['REQUEST_URI']);
@@ -42,7 +44,7 @@ $requestMethod = $_SERVER['REQUEST_METHOD'];
 error_log($requestUri);
 
 // Xác định base path của API
-$basePath = '/shop_pc/api'; // Sửa lại base path cho đúng
+$basePath = '/shoppc/api'; // Sửa lại base path cho đúng
 $apiPath = str_replace($basePath, '', $requestUri);
 
 error_log("API Path: " . $apiPath);
@@ -273,11 +275,51 @@ switch ($apiPath) {
         }
         break;
 
-    
+    // San pham route
+    case '/sanpham/filter':
+        if ($requestMethod === 'GET') {
+            $sanphamController->getFilterProduct();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
 
+    case '/sanpham':
+        if ($requestMethod === 'GET') {
+            $sanphamController->getAllByPage();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
 
+    case '/sanpham/create':
+        if ($requestMethod === 'POST') {
+            $sanphamController->createSanPham();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
 
+    case '/sanpham/update':
+        if ($requestMethod === 'PUT') {
+            $sanphamController->capnhatSanPham();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
 
+    case '/sanpham/status':
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $sanphamController->changeStatus();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
     default:
         http_response_code(404);
         echo json_encode(['error' => 'Endpoint not found', 'path' => $apiPath]);
