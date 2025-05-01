@@ -69,4 +69,58 @@ class HoaDonController {
             ]);
         }
     }
+
+    public function create() {
+        try {
+            // Xác thực người dùng
+            $userData = $this->authMiddleware->authenticate();
+            
+            // Lấy dữ liệu từ body request
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$data) {
+                throw new Exception("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
+            }
+            
+            // Validate dữ liệu
+            $this->validateCreateData($data);
+            
+            // Nếu không có MaNguoiDung, lấy từ token
+            if (!isset($data['MaNguoiDung'])) {
+                $data['MaNguoiDung'] = $userData['MaNguoiDung'];
+            }
+            
+            // Nếu không có TongTien, mặc định là 0
+            if (!isset($data['TongTien'])) {
+                $data['TongTien'] = 0;
+            }
+            
+            // Gọi model để tạo hóa đơn
+            $result = $this->hoaDonModel->create($data);
+            
+            // Trả về response
+            http_response_code(201);
+            echo json_encode([
+                'status' => 'success',
+                'data' => [
+                    'MaHD' => $result['id'],
+                    'message' => $result['message']
+                ]
+            ]);
+            
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    private function validateCreateData($data) {
+        // Kiểm tra MaNguoiDung
+        if (!isset($data['MaNguoiDung'])) {
+            throw new Exception("Mã người dùng không được để trống.");
+        }
+    }
 } 

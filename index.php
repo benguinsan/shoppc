@@ -197,6 +197,8 @@ switch ($apiPath) {
     case '/hoadon':
         if ($requestMethod === 'GET') {
             $hoaDonController->getAll();
+        } else if ($requestMethod === 'POST') {
+            $hoaDonController->create();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
