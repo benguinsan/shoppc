@@ -38,7 +38,7 @@ $requestMethod = $_SERVER['REQUEST_METHOD'];
 error_log($requestUri);
 
 // Xác định base path của API
-$basePath = '/shop_pc/api'; // Sửa lại base path cho đúng
+$basePath = '/shoppc/api'; // Sửa lại base path cho đúng
 $apiPath = str_replace($basePath, '', $requestUri);
 
 error_log("API Path: " . $apiPath);

@@ -4,7 +4,7 @@
     # Chuyển hướng tất cả requests tới shop_pc/api/* đến shop_pc/api/index.php
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^api/(.*)$ shop_pc/api/index.php [L]
+    RewriteRule ^api/(.*)$ shoppc/api/index.php [L]
     
     # Các rule khác cho frontend (nếu có)
     RewriteCond %{REQUEST_FILENAME} !-f
