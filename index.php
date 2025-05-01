@@ -5,6 +5,7 @@ require_once './api/NguoiDungController.php';
 require_once './api/NhomQuyenController.php';
 require_once './api/ChucNangController.php';
 require_once './api/NhaCungCapController.php';
+require_once './api/HoaDonController.php';
 
 // Thiết lập header JSON
 header("Content-Type: application/json");
@@ -27,6 +28,7 @@ $nguoiDungController = new NguoiDungController();
 $nhomQuyenController = new NhomQuyenController();
 $chucNangController = new ChucNangController();
 $nhaCungCapController = new NhaCungCapController();
+$hoaDonController = new HoaDonController();
 
 error_log($_SERVER['REQUEST_URI']);
 
@@ -191,9 +193,15 @@ switch ($apiPath) {
         }
         break;
 
-
-
-
+    // Hóa đơn route
+    case '/hoadon':
+        if ($requestMethod === 'GET') {
+            $hoaDonController->getAll();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
 
     default:
         http_response_code(404);
