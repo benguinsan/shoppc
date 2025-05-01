@@ -332,4 +332,98 @@ class HoaDon {
             throw new Exception("Không thể tạo hóa đơn: " . $e->getMessage());
         }
     }
+
+    public function update($maHD, $data) {
+        if ($this->conn === null) {
+            throw new Exception("Kết nối database không khả dụng");
+        }
+
+        try {
+            // Kiểm tra hóa đơn có tồn tại không
+            $checkInvoiceQuery = "SELECT COUNT(*) as count FROM " . $this->table_name . " WHERE MaHD = :MaHD";
+            $checkInvoiceStmt = $this->conn->prepare($checkInvoiceQuery);
+            $checkInvoiceStmt->bindParam(":MaHD", $maHD);
+            $checkInvoiceStmt->execute();
+            $invoiceCount = $checkInvoiceStmt->fetch(PDO::FETCH_ASSOC)['count'];
+            
+            if ($invoiceCount == 0) {
+                throw new Exception("Hóa đơn với mã {$maHD} không tồn tại.");
+            }
+            
+            // Kiểm tra người dùng có tồn tại không
+            if (isset($data['MaNguoiDung'])) {
+                $checkUserQuery = "SELECT COUNT(*) as count FROM nguoidung WHERE MaNguoiDung = :MaNguoiDung";
+                $checkUserStmt = $this->conn->prepare($checkUserQuery);
+                $checkUserStmt->bindParam(":MaNguoiDung", $data['MaNguoiDung']);
+                $checkUserStmt->execute();
+                $userCount = $checkUserStmt->fetch(PDO::FETCH_ASSOC)['count'];
+                
+                if ($userCount == 0) {
+                    throw new Exception("Người dùng với mã {$data['MaNguoiDung']} không tồn tại.");
+                }
+            }
+            
+            // Kiểm tra nhân viên có tồn tại không
+            if (isset($data['MaNhanVien']) && $data['MaNhanVien'] !== null) {
+                $checkStaffQuery = "SELECT COUNT(*) as count FROM nguoidung WHERE MaNguoiDung = :MaNhanVien";
+                $checkStaffStmt = $this->conn->prepare($checkStaffQuery);
+                $checkStaffStmt->bindParam(":MaNhanVien", $data['MaNhanVien']);
+                $checkStaffStmt->execute();
+                $staffCount = $checkStaffStmt->fetch(PDO::FETCH_ASSOC)['count'];
+                
+                if ($staffCount == 0) {
+                    throw new Exception("Nhân viên với mã {$data['MaNhanVien']} không tồn tại.");
+                }
+            }
+
+            // Bắt đầu transaction
+            $this->conn->beginTransaction();
+
+            // Xây dựng câu lệnh UPDATE
+            $setClause = [];
+            $params = [':MaHD' => $maHD];
+            
+            // Các trường có thể cập nhật
+            $allowedFields = ['MaNguoiDung', 'MaNhanVien', 'NgayLap', 'TongTien', 'TrangThai'];
+            
+            foreach ($allowedFields as $field) {
+                if (isset($data[$field])) {
+                    $setClause[] = "$field = :$field";
+                    $params[":$field"] = $data[$field];
+                }
+            }
+            
+            // Nếu không có trường nào được cập nhật
+            if (empty($setClause)) {
+                throw new Exception("Không có thông tin nào được cập nhật.");
+            }
+            
+            // Tạo và thực thi câu lệnh UPDATE
+            $query = "UPDATE " . $this->table_name . " SET " . implode(", ", $setClause) . " WHERE MaHD = :MaHD";
+            $stmt = $this->conn->prepare($query);
+            
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            
+            $stmt->execute();
+            
+            // Commit transaction
+            $this->conn->commit();
+            
+            return [
+                'id' => $maHD,
+                'message' => 'Cập nhật hóa đơn thành công',
+                'affected_rows' => $stmt->rowCount()
+            ];
+            
+        } catch (PDOException $e) {
+            // Rollback transaction nếu có lỗi
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
+            error_log("Lỗi cập nhật hóa đơn: " . $e->getMessage());
+            throw new Exception("Không thể cập nhật hóa đơn: " . $e->getMessage());
+        }
+    }
 } 

@@ -205,6 +205,17 @@ switch ($apiPath) {
         }
         break;
 
+    case (preg_match('#^/hoadon/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maHD = $matches[1];
+
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $hoaDonController->update($maHD);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
     default:
         http_response_code(404);
         echo json_encode(['error' => 'Endpoint not found', 'path' => $apiPath]);

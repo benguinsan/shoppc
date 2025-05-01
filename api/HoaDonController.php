@@ -123,4 +123,39 @@ class HoaDonController {
             throw new Exception("Mã người dùng không được để trống.");
         }
     }
+    
+    public function update($maHD) {
+        try {
+            // Xác thực người dùng
+            $userData = $this->authMiddleware->authenticate();
+            
+            // Lấy dữ liệu từ body request
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$data) {
+                throw new Exception("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
+            }
+            
+            // Gọi model để cập nhật hóa đơn
+            $result = $this->hoaDonModel->update($maHD, $data);
+            
+            // Trả về response
+            http_response_code(200);
+            echo json_encode([
+                'status' => 'success',
+                'data' => [
+                    'MaHD' => $result['id'],
+                    'message' => $result['message'],
+                    'affected_rows' => $result['affected_rows']
+                ]
+            ]);
+            
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
 } 
