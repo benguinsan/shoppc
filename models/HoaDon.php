@@ -54,7 +54,10 @@ class HoaDon {
                      WHERE 1=1";
 
             // Query đếm tổng số record
-            $countQuery = "SELECT COUNT(*) as total FROM " . $this->table_name . " hd WHERE 1=1";
+            $countQuery = "SELECT COUNT(*) as total FROM " . $this->table_name . " hd 
+                           LEFT JOIN nguoidung nd ON hd.MaNguoiDung = nd.MaNguoiDung
+                           LEFT JOIN nguoidung nv ON hd.MaNhanVien = nv.MaNguoiDung
+                           WHERE 1=1";
 
             $params = array();
 
@@ -63,7 +66,11 @@ class HoaDon {
                 $query .= " AND (hd.MaHD LIKE :search 
                            OR nd.HoTen LIKE :search 
                            OR nv.HoTen LIKE :search)";
-                $countQuery .= " AND (hd.MaHD LIKE :search)";
+                           
+                $countQuery .= " AND (hd.MaHD LIKE :search 
+                               OR nd.HoTen LIKE :search
+                               OR nv.HoTen LIKE :search)";
+                               
                 $params[':search'] = "%$searchTerm%";
             }
 
