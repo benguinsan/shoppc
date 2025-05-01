@@ -28,6 +28,7 @@ class ChiTietHoaDon {
             throw new Exception("Kết nối database không khả dụng");
         }
 
+        
         try {
             $query = "SELECT ct.*, sp.TenSP 
                      FROM " . $this->table_name . " ct
