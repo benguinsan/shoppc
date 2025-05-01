@@ -6,6 +6,7 @@ require_once './api/NhomQuyenController.php';
 require_once './api/ChucNangController.php';
 require_once './api/NhaCungCapController.php';
 require_once './api/HoaDonController.php';
+require_once './api/ChiTietHoaDonController.php';
 
 // Thiết lập header JSON
 header("Content-Type: application/json");
@@ -29,6 +30,7 @@ $nhomQuyenController = new NhomQuyenController();
 $chucNangController = new ChucNangController();
 $nhaCungCapController = new NhaCungCapController();
 $hoaDonController = new HoaDonController();
+$chiTietHoaDonController = new ChiTietHoaDonController();
 
 error_log($_SERVER['REQUEST_URI']);
 
@@ -210,6 +212,27 @@ switch ($apiPath) {
 
         if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
             $hoaDonController->update($maHD);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    // Chi tiết hóa đơn route
+    case '/chitiethoadon':
+        if ($requestMethod === 'GET') {
+            $chiTietHoaDonController->getAll();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    case (preg_match('#^/hoadon/([^/]+)/chitiet$#', $apiPath, $matches) ? true : false):
+        $maHD = $matches[1];
+
+        if ($requestMethod === 'GET') {
+            $chiTietHoaDonController->getByMaHD($maHD);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
