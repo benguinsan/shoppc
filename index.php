@@ -230,6 +230,17 @@ switch ($apiPath) {
         }
         break;
         
+    case (preg_match('#^/chitiethoadon/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maCTHD = $matches[1];
+
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $chiTietHoaDonController->update($maCTHD);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
     case (preg_match('#^/hoadon/([^/]+)/chitiet$#', $apiPath, $matches) ? true : false):
         $maHD = $matches[1];
 

@@ -138,6 +138,65 @@ class ChiTietHoaDonController {
         }
     }
     
+    public function update($maCTHD) {
+        try {
+            // Xác thực người dùng
+            $userData = $this->authMiddleware->authenticate();
+            
+            // Lấy dữ liệu từ body request
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$data) {
+                throw new Exception("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
+            }
+            
+            // Validate dữ liệu
+            $this->validateUpdateData($data);
+            
+            // Gọi model để cập nhật chi tiết hóa đơn
+            $result = $this->chiTietHoaDonModel->update($maCTHD, $data);
+            
+            // Trả về response
+            http_response_code(200);
+            echo json_encode([
+                'status' => 'success',
+                'data' => [
+                    'MaCTHD' => $result['id'],
+                    'message' => $result['message'],
+                    'affected_rows' => $result['affected_rows']
+                ]
+            ]);
+            
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    private function validateUpdateData($data) {
+        // Kiểm tra có ít nhất một trường được cập nhật
+        $allowedFields = ['MaSP', 'MaSeri', 'DonGia'];
+        $hasUpdate = false;
+        
+        foreach ($allowedFields as $field) {
+            if (isset($data[$field])) {
+                $hasUpdate = true;
+                
+                // Kiểm tra DonGia nếu được cung cấp
+                if ($field === 'DonGia' && (!is_numeric($data['DonGia']) || (float)$data['DonGia'] <= 0)) {
+                    throw new Exception("Đơn giá phải là số dương.");
+                }
+            }
+        }
+        
+        if (!$hasUpdate) {
+            throw new Exception("Không có thông tin nào được cập nhật.");
+        }
+    }
+    
     private function validateCreateData($data) {
         // Kiểm tra các trường bắt buộc
         $requiredFields = ['MaHD', 'MaSP', 'MaSeri', 'DonGia'];
