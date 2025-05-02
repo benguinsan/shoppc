@@ -7,6 +7,9 @@ require_once './api/ChucNangController.php';
 require_once './api/NhaCungCapController.php';
 require_once './api/LoaiSanPhamController.php';
 require_once './api/taikhoan/TaiKhoanController.php';
+require_once './api/HoaDonController.php';
+require_once './api/ChiTietHoaDonController.php';
+
 // Thiết lập header JSON
 header("Content-Type: application/json");
 
@@ -29,6 +32,8 @@ $nguoiDungController = new NguoiDungController();
 $nhomQuyenController = new NhomQuyenController();
 $chucNangController = new ChucNangController();
 $nhaCungCapController = new NhaCungCapController();
+$hoaDonController = new HoaDonController();
+$chiTietHoaDonController = new ChiTietHoaDonController();
 $loaiSanPhamController = new LoaiSanPhamController();
 $taiKhoanController = new TaiKhoanController();
 
@@ -43,7 +48,7 @@ $requestMethod = $_SERVER['REQUEST_METHOD'];
 error_log($requestUri);
 
 // Xác định base path của API
-$basePath = '/shoppc/api'; // Sửa lại base path cho đúng
+$basePath = '/shop_pc/api'; // Sửa lại base path cho đúng
 $apiPath = str_replace($basePath, '', $requestUri);
 
 error_log("API Path: " . $apiPath);
@@ -249,6 +254,71 @@ switch ($apiPath) {
         }
         break;
 
+    // Hóa đơn route
+    case '/hoadon':
+        if ($requestMethod === 'GET') {
+            $hoaDonController->getAll();
+        } else if ($requestMethod === 'POST') {
+            $hoaDonController->create();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/hoadon/search':
+        if ($requestMethod === 'GET') {
+            $hoaDonController->search();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/hoadon/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maHD = $matches[1];
+
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $hoaDonController->update($maHD);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    // Chi tiết hóa đơn route
+    case '/chitiethoadon':
+        if ($requestMethod === 'GET') {
+            $chiTietHoaDonController->getAll();
+        } else if ($requestMethod === 'POST') {
+            $chiTietHoaDonController->create();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    case (preg_match('#^/chitiethoadon/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maCTHD = $matches[1];
+
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $chiTietHoaDonController->update($maCTHD);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    case (preg_match('#^/hoadon/([^/]+)/chitiet$#', $apiPath, $matches) ? true : false):
+        $maHD = $matches[1];
+
+        if ($requestMethod === 'GET') {
+            $chiTietHoaDonController->getByMaHD($maHD);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
     // Xóa mềm nhà cung cấp
     case (preg_match('#^/nhacungcap/([^/]+)/soft-delete$#', $apiPath, $matches) && $requestMethod === 'PUT'):
         $nhaCungCapController->softDelete($matches[1]);
