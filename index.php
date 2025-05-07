@@ -10,6 +10,7 @@ require_once './api/taikhoan/TaiKhoanController.php';
 require_once './api/SanPhamController.php';
 require_once './api/HoaDonController.php';
 require_once './api/ChiTietHoaDonController.php';
+require_once './api/VNPayController.php';
 
 // Thiết lập header JSON
 header("Content-Type: application/json");
@@ -39,6 +40,7 @@ $loaiSanPhamController = new LoaiSanPhamController();
 $taiKhoanController = new TaiKhoanController();
 $sanphamController = new SanPhamController();
 
+$vnpayController = new VNPayController();
 
 error_log($_SERVER['REQUEST_URI']);
 
@@ -414,6 +416,25 @@ switch ($apiPath) {
 
         if ($requestMethod === 'GET') {
             $sanphamController->getSanPhamByMaSP($maSP);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // VNPay routes
+    case '/payment/vnpay/create':
+        if ($requestMethod === 'POST') {
+            $vnpayController->createPayment();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/payment/vnpay/return':
+        if ($requestMethod === 'GET') {
+            $vnpayController->paymentReturn();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
