@@ -26,71 +26,50 @@ class LoaiSanPham
         }
     }
 
-    public function getAll($page = 1, $limit = 10, $searchTerm = '', $orderDirection = 'DESC')
+    public function getAll($page = 1, $limit = 15, $orderDirection = 'DESC')
     {
-        if ($this->conn === null) {
-            throw new Exception("Kết nối database không khả dụng");
-        }
-
         try {
-            $page = max(1, (int)$page);
-            $limit = max(1, (int)$limit);
+            // Validate order direction
+            $orderDirection = strtoupper($orderDirection) === 'ASC' ? 'ASC' : 'DESC';
+
+            // Calculate offset
             $offset = ($page - 1) * $limit;
 
-            $orderDirection = strtoupper($orderDirection);
-            if ($orderDirection !== 'ASC' && $orderDirection !== 'DESC') {
-                $orderDirection = 'DESC';
-            }
+            // Get total records for pagination
+            $total_query = "SELECT COUNT(*) as total FROM " . $this->table_name;
+            $total_stmt = $this->conn->prepare($total_query);
+            $total_stmt->execute();
+            $total_row = $total_stmt->fetch(PDO::FETCH_ASSOC);
+            $total_records = $total_row['total'];
 
-            $orderBy = 'MaLoaiSP'; // Mặc định sắp xếp theo MaLoaiSP
-
-            $query = "SELECT * FROM " . $this->table_name;
-            $countQuery = "SELECT COUNT(*) as total FROM " . $this->table_name;
-            $params = [];
-
-            if (!empty($searchTerm)) {
-                $query .= " WHERE TenLoaiSP LIKE :searchTerm OR MoTa LIKE :searchTerm";
-                $countQuery .= " WHERE TenLoaiSP LIKE :searchTerm OR MoTa LIKE :searchTerm";
-                $params[':searchTerm'] = "%$searchTerm%";
-            }
-
-            $query .= " ORDER BY " . $orderBy . " " . $orderDirection;
-            $query .= " LIMIT :limit OFFSET :offset";
-
-            $countStmt = $this->conn->prepare($countQuery);
-            if (!empty($searchTerm)) {
-                $countStmt->bindParam(':searchTerm', $params[':searchTerm']);
-            }
-            $countStmt->execute();
-            $totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+            // Get products with pagination
+            $query = "SELECT * FROM " . $this->table_name . " 
+                     ORDER BY MaLoaiSP $orderDirection 
+                     LIMIT :limit OFFSET :offset";
 
             $stmt = $this->conn->prepare($query);
-            if (!empty($searchTerm)) {
-                $stmt->bindParam(':searchTerm', $params[':searchTerm']);
-            }
             $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
-
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $totalPages = ceil($totalRecords / $limit);
 
             return [
                 'data' => $records,
                 'pagination' => [
-                    'total' => $totalRecords,
+                    'total' => $total_records,
                     'per_page' => $limit,
                     'current_page' => $page,
-                    'last_page' => $totalPages,
+                    'last_page' => ceil($total_records / $limit),
                     'from' => $offset + 1,
-                    'to' => min($offset + $limit, $totalRecords)
+                    'to' => min($offset + $limit, $total_records)
                 ]
             ];
         } catch (PDOException $e) {
-            error_log("Lỗi lấy danh sách loại sản phẩm: " . $e->getMessage());
-            throw new Exception("Không thể lấy danh sách loại sản phẩm: " . $e->getMessage());
+            error_log("Lỗi truy vấn sản phẩm: " . $e->getMessage());
+            throw new Exception("Có lỗi xảy ra khi lấy danh sách sản phẩm"  . $e->getMessage());
         }
     }
+
 
     public function getById($maLoaiSP)
     {
@@ -213,21 +192,31 @@ class LoaiSanPham
             // Kiểm tra xem loại sản phẩm có tồn tại không
             $loaiSanPham = $this->getById($maLoaiSP);
             if (!$loaiSanPham) {
-                throw new Exception("Không tìm thấy loại sản phẩm");
+                throw new Exception("Không tìm thấy loại sản phẩm" . $maLoaiSP);
             }
 
-            // Kiểm tra xem loại sản phẩm có đang được sử dụng không
-            // (Bạn có thể thêm kiểm tra liên kết với bảng sản phẩm ở đây)
+            // Toggle trạng thái (0 -> 1 hoặc 1 -> 0)
+            $newStatus = $loaiSanPham['TrangThai'] == 1 ? 0 : 1;
 
-            $query = "DELETE FROM " . $this->table_name . " WHERE MaLoaiSP = :MaLoaiSP";
+            // Cập nhật trạng thái mới
+            $query = "UPDATE " . $this->table_name . " 
+                     SET TrangThai = :TrangThai 
+                     WHERE MaLoaiSP = :MaLoaiSP";
+
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(":MaLoaiSP", $maLoaiSP);
+            $stmt->bindParam(":TrangThai", $newStatus, PDO::PARAM_INT);
             $stmt->execute();
 
-            return true;
+            return [
+                'success' => true,
+                'message' => 'Đã thay đổi trạng thái loại sản phẩm',
+                'new_status' => $newStatus,
+                'MaLoaiSP' => $maLoaiSP
+            ];
         } catch (PDOException $e) {
-            error_log("Lỗi xóa loại sản phẩm: " . $e->getMessage());
-            throw new Exception("Không thể xóa loại sản phẩm: " . $e->getMessage());
+            error_log("Lỗi cập nhật trạng thái loại sản phẩm: " . $e->getMessage());
+            throw new Exception("Không thể cập nhật trạng thái loại sản phẩm: " . $e->getMessage());
         }
     }
 
