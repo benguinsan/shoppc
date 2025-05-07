@@ -7,14 +7,16 @@ require_once './api/ChucNangController.php';
 require_once './api/NhaCungCapController.php';
 require_once './api/HoaDonController.php';
 require_once './api/ChiTietHoaDonController.php';
+require_once './api/VNPayController.php';
 
 // Thiết lập header JSON
 header("Content-Type: application/json");
 
 // Xử lý CORS (cho phép truy cập từ các domain khác)
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
 // Xử lý preflight request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -31,6 +33,7 @@ $chucNangController = new ChucNangController();
 $nhaCungCapController = new NhaCungCapController();
 $hoaDonController = new HoaDonController();
 $chiTietHoaDonController = new ChiTietHoaDonController();
+$vnpayController = new VNPayController();
 
 error_log($_SERVER['REQUEST_URI']);
 
@@ -255,6 +258,25 @@ switch ($apiPath) {
 
         if ($requestMethod === 'GET') {
             $chiTietHoaDonController->getByMaHD($maHD);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // VNPay routes
+    case '/payment/vnpay/create':
+        if ($requestMethod === 'POST') {
+            $vnpayController->createPayment();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/payment/vnpay/return':
+        if ($requestMethod === 'GET') {
+            $vnpayController->paymentReturn();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
