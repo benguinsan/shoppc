@@ -15,10 +15,10 @@ require_once './api/ChiTietHoaDonController.php';
 header("Content-Type: application/json");
 
 // Xử lý CORS (cho phép truy cập từ các domain khác)
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Credentials: true");
+header('Access-Control-Allow-Origin: http://localhost:5173'); // Origin của frontend
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 // Xử lý preflight request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -74,7 +74,13 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-
+    
+    case '/auth/logout':
+        if ($requestMethod === 'POST') {
+            $authController->logout();
+        } 
+        break;
+        
     case '/user/profile':
         if ($requestMethod === 'GET') {
             $nguoiDungController->getCurrentUser();
@@ -321,14 +327,17 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
+
     // Xóa mềm nhà cung cấp
     case (preg_match('#^/nhacungcap/([^/]+)/soft-delete$#', $apiPath, $matches) && $requestMethod === 'PUT'):
         $nhaCungCapController->softDelete($matches[1]);
         break;
+
     // Khôi phục nhà cung cấp
     case (preg_match('#^/nhacungcap/([^/]+)/restore$#', $apiPath, $matches) && $requestMethod === 'PUT'):
         $nhaCungCapController->restore($matches[1]);
         break;
+
     // loai san pham route
     case '/loaisanpham':
         if ($requestMethod === 'GET') {
@@ -399,6 +408,18 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
+
+    case (preg_match('#^/sanpham/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maSP = $matches[1];
+
+        if ($requestMethod === 'GET') {
+            $sanphamController->getSanPhamByMaSP($maSP);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
     default:
         http_response_code(404);
         echo json_encode(['error' => 'Endpoint not found', 'path' => $apiPath]);

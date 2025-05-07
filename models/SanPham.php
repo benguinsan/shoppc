@@ -69,6 +69,20 @@ class SanPham
         }
     }
 
+    public function getSanPhamByMaSP($maSP)
+    {
+        try {
+            $query = "SELECT * FROM " . $this->table_name . " WHERE MaSP = :MaSP";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':MaSP', $maSP, PDO::PARAM_STR);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Lỗi truy vấn sản phẩm theo MaSP: " . $e->getMessage());
+            throw new Exception("Có lỗi xảy ra khi lấy sản phẩm theo MaSP: " . $e->getMessage());
+        }
+    }
+
     public function getFilter($filter, $page = 1, $limit = 15)
     {
         try {

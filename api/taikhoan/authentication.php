@@ -160,4 +160,29 @@ class AuthController
             echo json_encode(['error' => $e->getMessage()]);
         }
     }
+
+    public function logout()
+    {
+        try {
+            // Kiểm tra xem có token trong header không
+            $headers = getallheaders();
+            $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+
+            if (empty($authHeader) || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                // Nếu không có token, vẫn trả về thành công vì người dùng đã đăng xuất
+                http_response_code(200);
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Đăng xuất thành công'
+                ]);
+                return;
+            }
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
 }

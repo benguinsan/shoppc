@@ -108,6 +108,7 @@ class SanPhamController
 
     public function getAllByPage()
     {
+
         $pageNo = isset($_GET['page']) ? (int)$_GET['page'] : 0;
         $pageSize = isset($_GET['limit']) ? (int)$_GET['limit'] : 15;
 
@@ -130,6 +131,37 @@ class SanPhamController
             ]);
         }
     }
+
+    public function getSanPhamByMaSP($maSP)
+    {
+        try {
+            if (empty($maSP)) {
+                throw new Exception('Thiếu tham số MaSP');
+            }
+
+            $result = $this->sanPhamModel->getSanPhamByMaSP($maSP);
+
+            // Kiểm tra kết quả trả về
+            if (empty($result)) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Không tìm thấy sản phẩm với mã này',
+                    'data' => []
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => true,
+                    'data' => $result
+                ]);
+            }
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
     public function createSanPham()
     {
         $this->checkPermission('THEMSP');
@@ -171,7 +203,7 @@ class SanPhamController
             return;
         }
         try {
-            $result = $this->sanPhamModel->editSanpham($data); // Pass MaSP instead of entire data array
+            $result = $this->sanPhamModel->editSanpham($data); 
             echo json_encode([
                 'success' => true,
                 'message' => $result['message'],
