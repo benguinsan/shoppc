@@ -65,6 +65,24 @@ class SanPhamController
         */
     }
 
+    public function getBannerProduct()
+    {
+        try {
+            $result = $this->sanPhamModel->getBanner();
+
+            echo json_encode([
+                'success' => true,
+                'data' => $result,
+                'message' => 'Lấy banner sản phẩm thành công'
+            ]);
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
     public function getFilterProduct()
     {
         try {

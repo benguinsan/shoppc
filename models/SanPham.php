@@ -28,6 +28,22 @@ class SanPham
         }
     }
 
+    public function getBanner()
+    {
+        try {
+            $query = "SELECT * FROM " . $this->table_name . " 
+                 WHERE TrangThai = TRUE 
+                 ORDER BY MaSP DESC 
+                 LIMIT 10";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Lỗi truy vấn banner: " . $e->getMessage());
+            throw new Exception("Có lỗi xảy ra khi lấy banner: " . $e->getMessage());
+        }
+    }
+
     public function getAllByPage($page = 1, $limit = 15)
     {
         try {
@@ -154,7 +170,6 @@ class SanPham
         }
     }
 
-
     public function getByID($MaSP)
     {
         try {
@@ -168,6 +183,7 @@ class SanPham
             throw new Exception("Có lỗi xảy ra khi lấy sản phẩm theo ID");
         }
     }
+
     public function createSanpham($data)
     {
         if ($this->conn === null) {
