@@ -4,7 +4,6 @@ require_once 'NguoiDung.php';
 
 class Taikhoan
 {
-
     private $conn;
     private $table_name = "taikhoan";
 

@@ -366,6 +366,15 @@ switch ($apiPath) {
         break;
 
     // San pham route
+    case '/sanpham/banner':
+        if ($requestMethod === 'GET') {
+            $sanphamController->getBannerProduct();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
     case '/sanpham/filter':
         if ($requestMethod === 'GET') {
             $sanphamController->getFilterProduct();
