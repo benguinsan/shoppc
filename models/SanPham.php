@@ -119,8 +119,15 @@ class SanPham
 
             // Add RAM condition if present
             if (isset($filter['RAM']) && $filter['RAM'] !== '') {
-                $conditions[] = "RAM = :RAM";
-                $params[':RAM'] = $filter['RAM'];
+                // Split RAM values by comma
+                $ramValues = explode(',', $filter['RAM']);
+                $ramConditions = [];
+                foreach ($ramValues as $index => $value) {
+                    $paramName = ':RAM' . $index;
+                    $ramConditions[] = "RAM LIKE $paramName";
+                    $params[$paramName] = '%' . trim($value) . '%';
+                }
+                $conditions[] = '(' . implode(' OR ', $ramConditions) . ')';
             }
 
             // Add min_price condition if present

@@ -11,7 +11,7 @@ require_once './api/SanPhamController.php';
 require_once './api/HoaDonController.php';
 require_once './api/ChiTietHoaDonController.php';
 require_once './api/VNPayController.php';
-
+require_once './api/SearchController.php';
 // Thiết lập header JSON
 header("Content-Type: application/json");
 
@@ -39,6 +39,7 @@ $chiTietHoaDonController = new ChiTietHoaDonController();
 $loaiSanPhamController = new LoaiSanPhamController();
 $taiKhoanController = new TaiKhoanController();
 $sanphamController = new SanPhamController();
+$searchController = new SearchController();
 
 $vnpayController = new VNPayController();
 
@@ -76,13 +77,13 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-    
+
     case '/auth/logout':
         if ($requestMethod === 'POST') {
             $authController->logout();
-        } 
+        }
         break;
-        
+
     case '/user/profile':
         if ($requestMethod === 'GET') {
             $nguoiDungController->getCurrentUser();
@@ -295,7 +296,7 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-        
+
     // Chi tiết hóa đơn route
     case '/chitiethoadon':
         if ($requestMethod === 'GET') {
@@ -307,7 +308,7 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-        
+
     case (preg_match('#^/chitiethoadon/([^/]+)$#', $apiPath, $matches) ? true : false):
         $maCTHD = $matches[1];
 
@@ -318,7 +319,7 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-        
+
     case (preg_match('#^/hoadon/([^/]+)/chitiet$#', $apiPath, $matches) ? true : false):
         $maHD = $matches[1];
 
@@ -352,6 +353,16 @@ switch ($apiPath) {
         }
         break;
 
+    case (preg_match('#^/loaisanpham/([^/]+)/get$#', $apiPath, $matches) ? true : false):
+        $maLoaiSP = $matches[1];
+        if ($requestMethod === 'GET') {
+            $loaiSanPhamController->getOne($maLoaiSP);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
     case (preg_match('#^/loaisanpham/([^/]+)$#', $apiPath, $matches) ? true : false):
         $maLoaiSanPham = $matches[1];
 
@@ -366,6 +377,15 @@ switch ($apiPath) {
         break;
 
     // San pham route
+    case '/search':
+        if ($requestMethod === 'GET') {
+            $searchController->handleSearch();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
     case '/sanpham/banner':
         if ($requestMethod === 'GET') {
             $sanphamController->getBannerProduct();
