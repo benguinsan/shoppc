@@ -13,39 +13,87 @@ class NhaCungCapController
         $this->authMiddleware = new AuthMiddleware();
     }
 
-    // Kiểm tra quyền ADMIN
-    private function checkAdminPermission()
+    // Kiểm tra quyền
+    private function checkPermission($requiredPermission = 'ADMIN')
     {
         // Tạm thời bỏ qua kiểm tra quyền để test
         return true;
+
+        /*
+        try {
+            // Xác thực token và lấy thông tin từ token
+            $decodedToken = $this->authMiddleware->authenticate();
+
+            if (!$decodedToken) {
+                throw new Exception('Không thể xác thực người dùng');
+            }
+
+            // Kiểm tra quyền
+            if (!isset($decodedToken->MaNhomQuyen)) {
+                throw new Exception('Không tìm thấy thông tin quyền người dùng');
+            }
+            
+            // Kiểm tra xem người dùng có quyền yêu cầu không
+            $userPermission = $decodedToken->MaNhomQuyen;
+            
+            // Danh sách các quyền được phép
+            $allowedPermissions = [];
+            
+            // Nếu yêu cầu quyền ADMIN
+            if ($requiredPermission === 'ADMIN') {
+                $allowedPermissions = ['ADMIN'];
+            } 
+            // Nếu yêu cầu quyền QLNCC (Quản lý nhà cung cấp)
+            else if ($requiredPermission === 'QLNCC') {
+                $allowedPermissions = ['ADMIN', 'QLNCC'];
+            }
+            // Thêm các trường hợp khác nếu cần
+            
+            if (!in_array($userPermission, $allowedPermissions)) {
+                throw new Exception('Bạn không có quyền thực hiện hành động này');
+            }
+
+            return true;
+        } catch (Exception $e) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+            exit;
+        }
+        */
     }
 
     public function getAll()
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission('QLNCC');
 
         try {
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
             $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
-            $orderBy = isset($_GET['orderBy']) ? $_GET['orderBy'] : 'created_at';
+            $orderBy = isset($_GET['orderBy']) ? $_GET['orderBy'] : 'MaNCC';
             $orderDirection = isset($_GET['orderDirection']) ? $_GET['orderDirection'] : 'DESC';
+            
+            // Thêm tham số trạng thái
+            $trangThai = isset($_GET['trangThai']) ? (int)$_GET['trangThai'] : null;
 
-            $result = $this->nhaCungCapModel->getAll($page, $limit, $searchTerm, $orderBy, $orderDirection);
+            $result = $this->nhaCungCapModel->getAll($page, $limit, $searchTerm, $orderBy, $orderDirection, $trangThai);
             $this->sendResponse(200, $result);
         } catch (Exception $e) {
             $this->sendResponse(500, ['error' => $e->getMessage()]);
         }
     }
 
-    public function getOne($id)
+    public function getOne($maNhaCungCap)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission('QLNCC');
 
         try {
-            $nhaCungCap = $this->nhaCungCapModel->getById($id);
+            $nhaCungCap = $this->nhaCungCapModel->getById($maNhaCungCap);
 
             if (!$nhaCungCap) {
                 $this->sendResponse(404, ['error' => 'Không tìm thấy nhà cung cấp']);
@@ -60,8 +108,8 @@ class NhaCungCapController
 
     public function create()
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission('QLNCC');
 
         try {
             $data = json_decode(file_get_contents("php://input"), true);
@@ -95,10 +143,10 @@ class NhaCungCapController
         }
     }
 
-    public function update($id)
+    public function update($maNhaCungCap)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission('QLNCC');
 
         try {
             $data = json_decode(file_get_contents("php://input"), true);
@@ -116,8 +164,8 @@ class NhaCungCapController
                 return;
             }
 
-            if ($this->nhaCungCapModel->update($id, $data)) {
-                $nhaCungCap = $this->nhaCungCapModel->getById($id);
+            if ($this->nhaCungCapModel->update($maNhaCungCap, $data)) {
+                $nhaCungCap = $this->nhaCungCapModel->getById($maNhaCungCap);
 
                 $this->sendResponse(200, [
                     'message' => 'Cập nhật nhà cung cấp thành công',
@@ -131,16 +179,48 @@ class NhaCungCapController
         }
     }
 
-    public function delete($id)
+    public function delete($maNhaCungCap)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission('QLNCC');
 
         try {
-            if ($this->nhaCungCapModel->delete($id)) {
+            if ($this->nhaCungCapModel->delete($maNhaCungCap)) {
                 $this->sendResponse(200, ['message' => 'Xóa nhà cung cấp thành công']);
             } else {
                 $this->sendResponse(500, ['error' => 'Không thể xóa nhà cung cấp']);
+            }
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function softDelete($maNhaCungCap)
+    {
+        // Kiểm tra quyền
+        $this->checkPermission('QLNCC');
+
+        try {
+            if ($this->nhaCungCapModel->softDelete($maNhaCungCap)) {
+                $this->sendResponse(200, ['message' => 'Ẩn nhà cung cấp thành công']);
+            } else {
+                $this->sendResponse(500, ['error' => 'Không thể ẩn nhà cung cấp']);
+            }
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function restore($maNhaCungCap)
+    {
+        // Kiểm tra quyền
+        $this->checkPermission('QLNCC');
+
+        try {
+            if ($this->nhaCungCapModel->restore($maNhaCungCap)) {
+                $this->sendResponse(200, ['message' => 'Khôi phục nhà cung cấp thành công']);
+            } else {
+                $this->sendResponse(500, ['error' => 'Không thể khôi phục nhà cung cấp']);
             }
         } catch (Exception $e) {
             $this->sendResponse(500, ['error' => $e->getMessage()]);

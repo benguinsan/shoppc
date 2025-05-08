@@ -39,11 +39,13 @@ class NhomQuyen
             $offset = ($page - 1) * $limit;
 
             $orderDirection = strtoupper($orderDirection);
+
             if ($orderDirection !== 'ASC' && $orderDirection !== 'DESC') {
                 $orderDirection = 'DESC';
             }
 
             $validColumns = ['MaNhomQuyen', 'TenNhomQuyen', 'created_at'];
+            
             if (!in_array($orderBy, $validColumns)) {
                 $orderBy = 'created_at';
             }
@@ -135,8 +137,8 @@ class NhomQuyen
 
             $stmt->bindParam(":MaNhomQuyen", $maNhomQuyen);
             $stmt->bindParam(":TenNhomQuyen", $data['TenNhomQuyen']);
-
             $stmt->execute();
+            
             $this->lastInsertedId = $maNhomQuyen;
 
             // Thêm các chức năng vào nhóm quyền nếu có

@@ -13,8 +13,8 @@ class NhomQuyenController
         $this->authMiddleware = new AuthMiddleware();
     }
 
-    // Kiểm tra quyền ADMIN
-    private function checkAdminPermission()
+    // Kiểm tra quyền
+    private function checkPermission($requiredPermission = 'ADMIN')
     {
         // Tạm thời bỏ qua kiểm tra quyền để test
         return true;
@@ -28,8 +28,28 @@ class NhomQuyenController
                 throw new Exception('Không thể xác thực người dùng');
             }
 
-            // Kiểm tra quyền admin
-            if (!isset($decodedToken->MaNhomQuyen) || $decodedToken->MaNhomQuyen !== 'ADMIN') {
+            // Kiểm tra quyền
+            if (!isset($decodedToken->MaNhomQuyen)) {
+                throw new Exception('Không tìm thấy thông tin quyền người dùng');
+            }
+            
+            // Kiểm tra xem người dùng có quyền yêu cầu không
+            $userPermission = $decodedToken->MaNhomQuyen;
+            
+            // Danh sách các quyền được phép
+            $allowedPermissions = [];
+            
+            // Nếu yêu cầu quyền ADMIN
+            if ($requiredPermission === 'ADMIN') {
+                $allowedPermissions = ['ADMIN'];
+            } 
+            // Nếu yêu cầu quyền QLNQ (Quản lý nhóm quyền)
+            else if ($requiredPermission === 'QLNQ') {
+                $allowedPermissions = ['ADMIN', 'QLNQ'];
+            }
+            // Thêm các trường hợp khác nếu cần
+            
+            if (!in_array($userPermission, $allowedPermissions)) {
                 throw new Exception('Bạn không có quyền thực hiện hành động này');
             }
 
@@ -47,8 +67,8 @@ class NhomQuyenController
 
     public function getAll()
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -66,8 +86,8 @@ class NhomQuyenController
 
     public function getOne($id)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             $nhomQuyen = $this->nhomQuyenModel->getById($id);
@@ -84,8 +104,8 @@ class NhomQuyenController
 
     public function create()
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             $data = json_decode(file_get_contents("php://input"), true);
@@ -112,8 +132,8 @@ class NhomQuyenController
 
     public function update($id)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             $data = json_decode(file_get_contents("php://input"), true);
@@ -139,8 +159,8 @@ class NhomQuyenController
 
     public function delete($id)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             if ($this->nhomQuyenModel->delete($id)) {
@@ -155,8 +175,8 @@ class NhomQuyenController
 
     public function getFunctions($id)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             $functions = $this->nhomQuyenModel->getFunctionsByRoleId($id);
@@ -168,8 +188,8 @@ class NhomQuyenController
 
     public function updateFunctions($id)
     {
-        // Kiểm tra quyền ADMIN
-        $this->checkAdminPermission();
+        // Kiểm tra quyền
+        $this->checkPermission();
 
         try {
             $data = json_decode(file_get_contents("php://input"), true);
