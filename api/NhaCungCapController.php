@@ -74,10 +74,13 @@ class NhaCungCapController
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
             $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
-            $orderBy = isset($_GET['orderBy']) ? $_GET['orderBy'] : 'created_at';
+            $orderBy = isset($_GET['orderBy']) ? $_GET['orderBy'] : 'MaNCC';
             $orderDirection = isset($_GET['orderDirection']) ? $_GET['orderDirection'] : 'DESC';
+            
+            // Thêm tham số trạng thái
+            $trangThai = isset($_GET['trangThai']) ? (int)$_GET['trangThai'] : null;
 
-            $result = $this->nhaCungCapModel->getAll($page, $limit, $searchTerm, $orderBy, $orderDirection);
+            $result = $this->nhaCungCapModel->getAll($page, $limit, $searchTerm, $orderBy, $orderDirection, $trangThai);
             $this->sendResponse(200, $result);
         } catch (Exception $e) {
             $this->sendResponse(500, ['error' => $e->getMessage()]);
@@ -186,6 +189,38 @@ class NhaCungCapController
                 $this->sendResponse(200, ['message' => 'Xóa nhà cung cấp thành công']);
             } else {
                 $this->sendResponse(500, ['error' => 'Không thể xóa nhà cung cấp']);
+            }
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function softDelete($maNhaCungCap)
+    {
+        // Kiểm tra quyền
+        $this->checkPermission('QLNCC');
+
+        try {
+            if ($this->nhaCungCapModel->softDelete($maNhaCungCap)) {
+                $this->sendResponse(200, ['message' => 'Ẩn nhà cung cấp thành công']);
+            } else {
+                $this->sendResponse(500, ['error' => 'Không thể ẩn nhà cung cấp']);
+            }
+        } catch (Exception $e) {
+            $this->sendResponse(500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function restore($maNhaCungCap)
+    {
+        // Kiểm tra quyền
+        $this->checkPermission('QLNCC');
+
+        try {
+            if ($this->nhaCungCapModel->restore($maNhaCungCap)) {
+                $this->sendResponse(200, ['message' => 'Khôi phục nhà cung cấp thành công']);
+            } else {
+                $this->sendResponse(500, ['error' => 'Không thể khôi phục nhà cung cấp']);
             }
         } catch (Exception $e) {
             $this->sendResponse(500, ['error' => $e->getMessage()]);
