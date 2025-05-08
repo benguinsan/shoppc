@@ -48,27 +48,11 @@ class ChiTietPhieuNhapController {
     // Lấy chi tiết phiếu nhập theo mã phiếu nhập
     public function getByMaPhieuNhap($maPhieuNhap) {
         try {
-            $this->authMiddleware->authenticate();
-            $phieuNhap = $this->phieuNhapModel->getById($maPhieuNhap);
-            if (!$phieuNhap) {
-                throw new Exception("Phiếu nhập với mã {$maPhieuNhap} không tồn tại.");
-            }
-            $chiTietList = $this->chiTietPhieuNhapModel->getByMaPhieuNhap($maPhieuNhap);
-            $formattedRecords = array_map(function($record) {
-                return [
-                    'MaCTPN' => $record['MaCTPN'],
-                    'MaPhieuNhap' => $record['MaPhieuNhap'],
-                    'MaSP' => $record['MaSP'],
-                    'TenSP' => $record['TenSP'] ?? 'Không xác định',
-                    'SoLuong' => (int)$record['SoLuong'],
-                    'DonGia' => (float)$record['DonGia'],
-                    'ThanhTien' => (float)$record['ThanhTien']
-                ];
-            }, $chiTietList);
+            $data = $this->chiTietPhieuNhapModel->getByMaPhieuNhap($maPhieuNhap);
             http_response_code(200);
             echo json_encode([
                 'status' => 'success',
-                'data' => $formattedRecords
+                'data' => $data
             ]);
         } catch(Exception $e) {
             http_response_code(500);

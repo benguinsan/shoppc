@@ -13,6 +13,7 @@ require_once './api/ChiTietHoaDonController.php';
 require_once './api/PhieuNhapController.php';
 require_once './api/SanPhamController.php';
 require_once './api/VNPayController.php';
+require_once './api/ChiTietPhieuNhapController.php';
 
 // Thiết lập header JSON
 header("Content-Type: application/json");
@@ -45,8 +46,8 @@ $chiTietHoaDonController = new ChiTietHoaDonController();
 $loaiSanPhamController = new LoaiSanPhamController();
 $taiKhoanController = new TaiKhoanController();
 $sanphamController = new SanPhamController();
-
 $vnpayController = new VNPayController();
+$chiTietPhieuNhapController = new ChiTietPhieuNhapController();
 
 error_log($_SERVER['REQUEST_URI']);
 
@@ -450,6 +451,50 @@ switch ($apiPath) {
     case '/payment/vnpay/return':
         if ($requestMethod === 'GET') {
             $vnpayController->paymentReturn();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // PHIẾU NHẬP ROUTES
+    case '/phieunhap':
+        if ($requestMethod === 'GET') {
+            $phieuNhapController = new PhieuNhapController();
+            $phieuNhapController->getAll();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // NHÂN VIÊN ROUTES
+    case '/nhanvien':
+        if ($requestMethod === 'GET') {
+            $phieuNhapController = new PhieuNhapController();
+            $phieuNhapController->getNhanVien();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/chitietphieunhap':
+        if ($requestMethod === 'GET') {
+            $chiTietPhieuNhapController->getAll();
+        } else if ($requestMethod === 'POST') {
+            $chiTietPhieuNhapController->create();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/chitietphieunhap/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maPhieuNhap = $matches[1];
+        if ($requestMethod === 'GET') {
+            $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
+            $chiTietPhieuNhapController->getByMaPhieuNhap($maPhieuNhap);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);

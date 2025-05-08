@@ -11,6 +11,19 @@ class PhieuNhapController {
         $this->authMiddleware = new AuthMiddleware();
     }
 
+    private function getTrangThaiText($trangThai) {
+        switch($trangThai) {
+            case 0:
+                return 'Đã hủy';
+            case 1:
+                return 'Chờ xử lý';
+            case 2:
+                return 'Đã xử lý';
+            default:
+                return 'Không xác định';
+        }
+    }
+
     public function getAll() {
         try {
             // Xác thực người dùng
@@ -47,7 +60,7 @@ class PhieuNhapController {
                     'NgayNhap' => $record['NgayNhap'],
                     'TongTien' => (float)$record['TongTien'],
                     'TrangThai' => (int)$record['TrangThai'],
-                    'TrangThaiText' => $this->phieuNhapModel->getTrangThaiText($record['TrangThai'])
+                    'TrangThaiText' => $this->getTrangThaiText($record['TrangThai'])
                 ];
             }, $result['data']);
 
@@ -68,104 +81,32 @@ class PhieuNhapController {
         }
     }
 
-    public function create() {
+    /**
+     * Lấy danh sách tất cả nhân viên
+     */
+    public function getNhanVien() {
         try {
-            // Xác thực người dùng
-            $userData = $this->authMiddleware->authenticate();
-
-            // Lấy dữ liệu từ body request
-            $data = json_decode(file_get_contents('php://input'), true);
-            error_log('[PHIEU_NHAP_CONTROLLER_INPUT] ' . json_encode($data));
-
-            if (!$data) {
-                throw new Exception("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
-            }
-
-            // Validate dữ liệu
-            $this->validateCreateData($data);
-
-            // Gọi model để tạo phiếu nhập
-            $result = $this->phieuNhapModel->create($data);
-
-            // Trả về response
-            http_response_code(201);
-            echo json_encode([
-                'status' => 'success',
-                'data' => [
-                    'MaPN' => $result['id'],
-                    'message' => $result['message']
-                ]
-            ]);
-
-        } catch(Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
-
-    public function update($maPN) {
-        try {
-            // Xác thực người dùng
-            $userData = $this->authMiddleware->authenticate();
-
-            // Lấy dữ liệu từ body request
-            $data = json_decode(file_get_contents('php://input'), true);
-
-            if (!$data) {
-                throw new Exception("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
-            }
-
-            // Gọi model để cập nhật phiếu nhập
-            $result = $this->phieuNhapModel->update($maPN, $data);
-
-            // Trả về response
-            http_response_code(200);
-            echo json_encode([
-                'status' => 'success',
-                'data' => [
-                    'MaPN' => $result['id'],
-                    'message' => $result['message'],
-                    'affected_rows' => $result['affected_rows']
-                ]
-            ]);
-
-        } catch(Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
-
-    public function getDetail($maPhieuNhap) {
-        try {
+            // Xác thực người dùng (có thể bỏ nếu không cần)
             $this->authMiddleware->authenticate();
-            require_once __DIR__ . '/../models/ChiTietPhieuNhap.php';
-            require_once __DIR__ . '/../models/SeriSanPham.php';
-            $phieuNhap = $this->phieuNhapModel->getById($maPhieuNhap);
-            if (!$phieuNhap) {
-                throw new Exception("Không tìm thấy phiếu nhập");
-            }
-            $chiTietModel = new ChiTietPhieuNhap();
-            $seriModel = new SeriSanPham();
-            $chiTietList = $chiTietModel->getByMaPhieuNhap($maPhieuNhap);
-            // Lấy danh sách seri cho từng sản phẩm trong chi tiết
-            foreach ($chiTietList as &$ct) {
-                $ct['DanhSachSeri'] = $this->getSeriByMaSP($ct['MaSP']);
-            }
+            
+            // Log thông tin thực hiện API
+            error_log("Đang gọi API lấy danh sách nhân viên");
+            
+            // Gọi model để lấy danh sách nhân viên
+            $result = $this->phieuNhapModel->getAllNhanVien();
+            
+            // Log kết quả
+            error_log("Kết quả API nhân viên: " . json_encode($result));
+            
+            // Trả về response
             http_response_code(200);
-            echo json_encode([
-                'status' => 'success',
-                'data' => [
-                    'phieuNhap' => $phieuNhap,
-                    'chiTiet' => $chiTietList
-                ]
-            ]);
+            echo json_encode($result);
+            
         } catch(Exception $e) {
+            // Log chi tiết lỗi
+            error_log("Lỗi API nhân viên: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            
             http_response_code(500);
             echo json_encode([
                 'status' => 'error',
@@ -174,21 +115,4 @@ class PhieuNhapController {
         }
     }
 
-    private function getSeriByMaSP($maSP) {
-        $db = new \Database();
-        $conn = $db->getConnection();
-        $query = "SELECT SoSeri FROM serisanpham WHERE MaSP = :MaSP";
-        $stmt = $conn->prepare($query);
-        $stmt->bindParam(":MaSP", $maSP);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        return $result;
-    }
-
-    private function validateCreateData($data) {
-        // Kiểm tra MaNCC
-        if (!isset($data['MaNCC'])) {
-            throw new Exception("Mã nhà cung cấp không được để trống.");
-        }
-    }
 }

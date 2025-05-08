@@ -29,10 +29,12 @@ class ChiTietPhieuNhap {
         }
 
         try {
-            $query = "SELECT ctpn.*, sp.TenSP 
+            $query = "SELECT ctpn.*, sp.TenSP, pn.NgayNhap 
                      FROM " . $this->table_name . " ctpn
                      LEFT JOIN sanpham sp ON ctpn.MaSP = sp.MaSP
-                     WHERE ctpn.MaPhieuNhap = :MaPhieuNhap";
+                     LEFT JOIN phieunhap pn ON ctpn.MaPhieuNhap = pn.MaPhieuNhap
+                     WHERE ctpn.MaPhieuNhap = :MaPhieuNhap
+                     ORDER BY ctpn.MaCTPN";
 
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(":MaPhieuNhap", $maPhieuNhap);
