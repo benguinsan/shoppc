@@ -252,4 +252,20 @@ class NguoiDungController
         }
     }
 
+    public function getNhanVien() {
+        try {
+            $db = new Database();
+            $conn = $db->getConnection();
+            $query = "SELECT nd.MaNguoiDung, nd.HoTen FROM nguoidung nd JOIN taikhoan tk ON nd.MaNguoiDung = tk.MaNguoiDung WHERE tk.MaNhomQuyen = 'NHANVIEN' AND tk.TrangThai = 1";
+            $stmt = $conn->prepare($query);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            http_response_code(200);
+            echo json_encode(['status' => 'success', 'data' => $result]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
 }
