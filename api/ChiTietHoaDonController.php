@@ -113,11 +113,36 @@ class ChiTietHoaDonController {
                 throw new Exception("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
             }
             
-            // Validate dữ liệu
-            $this->validateCreateData($data);
+            // Validate dữ liệu (bỏ qua MaSeri)
+            $this->validateCreateDataNoSeri($data);
+            
+            // Lấy seri còn trống từ bảng serisanpham
+            require_once __DIR__ . '/../models/SeriSanPham.php';
+            $seriModel = new SeriSanPham();
+            $seriConTrong = $seriModel->getSeriConTrongByMaSP($data['MaSP']);
+            if (!$seriConTrong) {
+                http_response_code(400);
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Sản phẩm này đã hết hàng (không còn seri trống)!'
+                ]);
+                return;
+            }
+            $data['MaSeri'] = $seriConTrong['MaSeri'];
             
             // Gọi model để tạo chi tiết hóa đơn
             $result = $this->chiTietHoaDonModel->create($data);
+            
+            // Cập nhật trạng thái seri thành đã bán (1)
+            if (method_exists($seriModel, 'updateTrangThaiSeriByMaSeri')) {
+                $seriModel->updateTrangThaiSeriByMaSeri($seriConTrong['MaSeri'], 1);
+            } else {
+                // Nếu chưa có hàm, cập nhật trực tiếp
+                $updateSeriQuery = "UPDATE serisanpham SET TrangThai = 1 WHERE MaSeri = :maSeri";
+                $db = new \Database();
+                $conn = $db->getConnection();
+                $conn->prepare($updateSeriQuery)->execute([':maSeri' => $seriConTrong['MaSeri']]);
+            }
             
             // Trả về response
             http_response_code(201);
@@ -197,17 +222,13 @@ class ChiTietHoaDonController {
         }
     }
     
-    private function validateCreateData($data) {
-        // Kiểm tra các trường bắt buộc
-        $requiredFields = ['MaHD', 'MaSP', 'MaSeri', 'DonGia'];
-        
+    private function validateCreateDataNoSeri($data) {
+        $requiredFields = ['MaHD', 'MaSP', 'DonGia'];
         foreach ($requiredFields as $field) {
             if (!isset($data[$field]) || empty($data[$field])) {
                 throw new Exception("Trường {$field} là bắt buộc.");
             }
         }
-        
-        // Kiểm tra đơn giá
         if (!is_numeric($data['DonGia']) || (float)$data['DonGia'] <= 0) {
             throw new Exception("Đơn giá phải là số dương.");
         }
