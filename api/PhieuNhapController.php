@@ -93,7 +93,7 @@ class PhieuNhapController {
             error_log("Đang gọi API lấy danh sách nhân viên");
             
             // Gọi model để lấy danh sách nhân viên
-            $result = $this->phieuNhapModel->getAllNhanVien();
+            $result = $this->phieuNhapModel->getNhanVien();
             
             // Log kết quả
             error_log("Kết quả API nhân viên: " . json_encode($result));
@@ -112,6 +112,33 @@ class PhieuNhapController {
                 'status' => 'error',
                 'message' => $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * Tạo mới phiếu nhập
+     */
+    public function create() {
+        try {
+            $this->authMiddleware->authenticate();
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!$data) {
+                throw new Exception("Dữ liệu không hợp lệ.");
+            }
+            // Validate các trường cần thiết
+            $required = ['MaNCC', 'MaNhanVien', 'NgayNhap', 'TongTien'];
+            foreach ($required as $field) {
+                if (!isset($data[$field]) || $data[$field] === '' || $data[$field] === null) throw new Exception("Thiếu trường $field");
+            }
+            if (!is_numeric($data['TongTien']) || $data['TongTien'] < 0) {
+                throw new Exception("Tổng tiền phải là số không âm.");
+            }
+            $result = $this->phieuNhapModel->create($data);
+            http_response_code($result['status'] === 'success' ? 201 : 400);
+            echo json_encode($result);
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
     }
 

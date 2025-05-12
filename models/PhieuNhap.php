@@ -115,42 +115,18 @@ class PhieuNhap {
         }
     }
     
-    public function getAllNhanVien() {
+    public function getNhanVien() {
         try {
-            // Kiểm tra cấu trúc bảng
-            $checkTableQuery = "SHOW COLUMNS FROM nguoidung";
-            $checkStmt = $this->conn->prepare($checkTableQuery);
-            $checkStmt->execute();
-            $columns = $checkStmt->fetchAll(PDO::FETCH_COLUMN);
-            
-            $query = "SELECT MaNguoiDung, HoTen, Email, SDT FROM nguoidung";
-            
-            // Nếu có trường MaNhomQuyen, thêm điều kiện lọc
-            if (in_array('MaNhomQuyen', $columns)) {
-                $query .= " WHERE MaNhomQuyen = 'NHANVIEN'";
-            } 
-            // Nếu có trường TrangThai, chỉ lấy người dùng đang hoạt động
-            if (in_array('TrangThai', $columns)) {
-                $query .= (strpos($query, 'WHERE') !== false) ? " AND TrangThai = 1" : " WHERE TrangThai = 1";
-            }
-            
-            $query .= " ORDER BY HoTen ASC";
-            
-            // Log query để debug
-            error_log("Query getAllNhanVien: " . $query);
-            
+            $query = "SELECT nd.*, tk.*
+                      FROM nguoidung nd
+                      JOIN taikhoan tk ON nd.MaNguoiDung = tk.MaNguoiDung
+                      WHERE tk.MaNhomQuyen = 'NHANVIEN'
+                      AND (tk.TrangThai = 1 OR tk.TrangThai IS NULL)
+                      ORDER BY nd.HoTen ASC";
+
             $stmt = $this->conn->prepare($query);
             $stmt->execute();
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Nếu không có kết quả, lấy tất cả người dùng
-            if (empty($result)) {
-                $query = "SELECT MaNguoiDung, HoTen, Email, SDT FROM nguoidung ORDER BY HoTen ASC";
-                error_log("Thử lại với query: " . $query);
-                $stmt = $this->conn->prepare($query);
-                $stmt->execute();
-                $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            }
 
             return [
                 'status' => 'success',
@@ -159,6 +135,86 @@ class PhieuNhap {
         } catch (PDOException $e) {
             error_log("Lỗi lấy danh sách nhân viên: " . $e->getMessage());
             throw new Exception("Không thể lấy danh sách nhân viên: " . $e->getMessage());
+        }
+    }
+
+    public function postPhieuNhap($MaNCC, $MaNhanVien, $NgayNhap, $danhSachSanPham, $TongTien, $TrangThai = 1) {
+        try {
+            $this->conn->beginTransaction();
+
+            // 1. Tạo mã phiếu nhập mới
+            $MaPhieuNhap = uniqid('PN');
+
+            // 2. Thêm vào bảng phieunhap
+            $sqlPN = "INSERT INTO phieunhap (MaPhieuNhap, MaNCC, MaNhanVien, NgayNhap, TongTien, TrangThai) VALUES (?, ?, ?, ?, ?, ?)";
+            $stmtPN = $this->conn->prepare($sqlPN);
+            $stmtPN->execute([$MaPhieuNhap, $MaNCC, $MaNhanVien, $NgayNhap, $TongTien, $TrangThai]);
+
+            // 3. Thêm vào bảng chitietphieunhap
+            foreach ($danhSachSanPham as $sp) {
+                $MaCTPN = uniqid('CTPN');
+                $sqlCT = "INSERT INTO chitietphieunhap (MaCTPN, MaPhieuNhap, MaSP, SoLuong, DonGia, ThanhTien) VALUES (?, ?, ?, ?, ?, ?)";
+                $stmtCT = $this->conn->prepare($sqlCT);
+                $stmtCT->execute([
+                    $MaCTPN,
+                    $MaPhieuNhap,
+                    $sp['MaSP'],
+                    $sp['SoLuong'],
+                    $sp['DonGia'],
+                    $sp['ThanhTien']
+                ]);
+
+                // 4. Nếu có danh sách seri, thêm vào bảng sanphamsoseri
+                if (isset($sp['SoSeri']) && is_array($sp['SoSeri'])) {
+                    foreach ($sp['SoSeri'] as $seri) {
+                        $MaSeri = uniqid('SERI');
+                        $sqlSeri = "INSERT INTO sanphamsoseri (MaSeri, MaSP, SoSeri, TrangThai) VALUES (?, ?, ?, 1)";
+                        $stmtSeri = $this->conn->prepare($sqlSeri);
+                        $stmtSeri->execute([$MaSeri, $sp['MaSP'], $seri]);
+                    }
+                }
+            }
+
+            $this->conn->commit();
+            return [
+                'status' => 'success',
+                'MaPhieuNhap' => $MaPhieuNhap
+            ];
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            error_log("Lỗi thêm phiếu nhập: " . $e->getMessage());
+            return [
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    public function create($data) {
+        try {
+            $this->conn->beginTransaction();
+            $MaPhieuNhap = uniqid('PN');
+            $sql = "INSERT INTO phieunhap (MaPhieuNhap, MaNCC, MaNhanVien, NgayNhap, TongTien, TrangThai) VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                $MaPhieuNhap,
+                $data['MaNCC'],
+                $data['MaNhanVien'],
+                $data['NgayNhap'],
+                $data['TongTien'],
+                $data['TrangThai'] ?? 1
+            ]);
+            $this->conn->commit();
+            return [
+                'status' => 'success',
+                'MaPhieuNhap' => $MaPhieuNhap
+            ];
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return [
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ];
         }
     }
 } 

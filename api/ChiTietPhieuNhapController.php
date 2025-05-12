@@ -90,33 +90,6 @@ class ChiTietPhieuNhapController {
         }
     }
 
-    public function update($maCTPN) {
-        try {
-            $this->authMiddleware->authenticate();
-            $data = json_decode(file_get_contents('php://input'), true);
-            if (!$data) {
-                throw new Exception("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
-            }
-            $this->validateUpdateData($data);
-            $result = $this->chiTietPhieuNhapModel->update($maCTPN, $data);
-            http_response_code(200);
-            echo json_encode([
-                'status' => 'success',
-                'data' => [
-                    'MaCTPN' => $result['id'],
-                    'message' => $result['message'],
-                    'affected_rows' => $result['affected_rows']
-                ]
-            ]);
-        } catch(Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
-
     private function validateCreateData($data) {
         $requiredFields = ['MaPhieuNhap', 'MaSP', 'SoLuong', 'DonGia'];
         foreach ($requiredFields as $field) {
@@ -132,22 +105,26 @@ class ChiTietPhieuNhapController {
         }
     }
 
-    private function validateUpdateData($data) {
-        $allowedFields = ['MaSP', 'SoLuong', 'DonGia'];
-        $hasUpdate = false;
-        foreach ($allowedFields as $field) {
-            if (isset($data[$field])) {
-                $hasUpdate = true;
-                if ($field === 'DonGia' && (!is_numeric($data['DonGia']) || (float)$data['DonGia'] <= 0)) {
-                    throw new Exception("Đơn giá phải là số dương.");
-                }
-                if ($field === 'SoLuong' && (!is_numeric($data['SoLuong']) || (int)$data['SoLuong'] <= 0)) {
-                    throw new Exception("Số lượng phải là số dương.");
-                }
+    /**
+     * Tạo mới chi tiết phiếu nhập (dùng hàm createChiTietPhieuNhap ở model)
+     */
+    public function createChiTietPhieuNhap() {
+        try {
+            $this->authMiddleware->authenticate();
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!$data) {
+                throw new Exception("Dữ liệu không hợp lệ.");
             }
-        }
-        if (!$hasUpdate) {
-            throw new Exception("Không có thông tin nào được cập nhật.");
+            $required = ['MaPhieuNhap', 'MaSP', 'SoLuong', 'DonGia', 'ThanhTien'];
+            foreach ($required as $field) {
+                if (empty($data[$field])) throw new Exception("Thiếu trường $field");
+            }
+            $result = $this->chiTietPhieuNhapModel->createChiTietPhieuNhap($data);
+            http_response_code($result['status'] === 'success' ? 201 : 400);
+            echo json_encode($result);
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
     }
 } 

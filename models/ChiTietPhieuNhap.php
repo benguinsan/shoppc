@@ -215,4 +215,29 @@ class ChiTietPhieuNhap {
             throw new Exception("Không thể cập nhật chi tiết phiếu nhập: " . $e->getMessage());
         }
     }
+
+    public function createChiTietPhieuNhap($data) {
+        try {
+            $MaCTPN = uniqid('CTPN');
+            $sql = "INSERT INTO chitietphieunhap (MaCTPN, MaPhieuNhap, MaSP, SoLuong, DonGia, ThanhTien) VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                $MaCTPN,
+                $data['MaPhieuNhap'],
+                $data['MaSP'],
+                $data['SoLuong'],
+                $data['DonGia'],
+                $data['ThanhTien']
+            ]);
+            return [
+                'status' => 'success',
+                'MaCTPN' => $MaCTPN
+            ];
+        } catch (Exception $e) {
+            return [
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ];
+        }
+    }
 }

@@ -41,17 +41,7 @@ class SeriSanPham {
         return $row['count'] > 0;
     }
 
-    public function insertSeri($maSP, $seri, $trangThai = 1) {
-        $query = "INSERT INTO $this->table_name (MaSeri, MaSP, SoSeri, TrangThai) VALUES (:MaSeri, :MaSP, :SoSeri, :TrangThai)";
-        $maSeri = uniqid('SERI');
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":MaSeri", $maSeri);
-        $stmt->bindParam(":MaSP", $maSP);
-        $stmt->bindParam(":SoSeri", $seri);
-        $stmt->bindParam(":TrangThai", $trangThai);
-        $stmt->execute();
-        return $maSeri;
-    }
+
 
     public function countByMaSP($maSP) {
         $query = "SELECT COUNT(*) as count FROM $this->table_name WHERE MaSP = :maSP";
@@ -60,5 +50,30 @@ class SeriSanPham {
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return (int)$row['count'];
+    }
+
+    // Hàm tạo mới seri với MaSP, MaSeri và SoSeri đều random
+    public function createSeri($maSP, $trangThai = 1) {
+        $maSeri = $this->randomSeri(16); // Random MaSeri
+        // Đảm bảo MaSeri không trùng
+        while ($this->checkSeriExists($maSeri)) {
+            $maSeri = $this->randomSeri(16);
+        }
+        $soSeri = $this->randomSeri(16); // Random SoSeri
+        // Đảm bảo SoSeri không trùng
+        while ($this->checkSeriExists($soSeri)) {
+            $soSeri = $this->randomSeri(16);
+        }
+        $query = "INSERT INTO $this->table_name (MaSeri, MaSP, SoSeri, TrangThai) VALUES (:MaSeri, :MaSP, :SoSeri, :TrangThai)";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":MaSeri", $maSeri);
+        $stmt->bindParam(":MaSP", $maSP);
+        $stmt->bindParam(":SoSeri", $soSeri);
+        $stmt->bindParam(":TrangThai", $trangThai);
+        $stmt->execute();
+        return [
+            'MaSeri' => $maSeri,
+            'SoSeri' => $soSeri
+        ];
     }
 }

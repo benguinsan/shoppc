@@ -14,6 +14,9 @@ require_once './api/PhieuNhapController.php';
 require_once './api/SanPhamController.php';
 require_once './api/VNPayController.php';
 require_once './api/ChiTietPhieuNhapController.php';
+require_once './api/SeriSanPhamController.php';
+require_once './api/BaoHanhController.php';
+require_once './api/ChiTietBaoHanhController.php';
 
 // Thiết lập header JSON
 header("Content-Type: application/json");
@@ -48,6 +51,8 @@ $taiKhoanController = new TaiKhoanController();
 $sanphamController = new SanPhamController();
 $vnpayController = new VNPayController();
 $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
+$baoHanhController = new BaoHanhController();
+$chiTietBaoHanhController = new ChiTietBaoHanhController();
 
 error_log($_SERVER['REQUEST_URI']);
 
@@ -459,9 +464,11 @@ switch ($apiPath) {
 
     // PHIẾU NHẬP ROUTES
     case '/phieunhap':
+        $phieuNhapController = new PhieuNhapController();
         if ($requestMethod === 'GET') {
-            $phieuNhapController = new PhieuNhapController();
             $phieuNhapController->getAll();
+        } else if ($requestMethod === 'POST') {
+            $phieuNhapController->create();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -469,7 +476,7 @@ switch ($apiPath) {
         break;
 
     // NHÂN VIÊN ROUTES
-    case '/nhanvien':
+    case '/phieunhap/nhanvien':
         if ($requestMethod === 'GET') {
             $phieuNhapController = new PhieuNhapController();
             $phieuNhapController->getNhanVien();
@@ -480,21 +487,108 @@ switch ($apiPath) {
         break;
 
     case '/chitietphieunhap':
+        $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
         if ($requestMethod === 'GET') {
-            $chiTietPhieuNhapController->getAll();
-        } else if ($requestMethod === 'POST') {
-            $chiTietPhieuNhapController->create();
+            $chiTietPhieuNhapController->getAll(); 
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
 
-    case (preg_match('#^/chitietphieunhap/([^/]+)$#', $apiPath, $matches) ? true : false):
-        $maPhieuNhap = $matches[1];
-        if ($requestMethod === 'GET') {
+        case (preg_match('#^/chitietphieunhap/([^/]+)$#', $apiPath, $matches) ? true : false):
+            $maPhieuNhap = $matches[1];
+            if ($requestMethod === 'GET') {
+                $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
+                $chiTietPhieuNhapController->getByMaPhieuNhap($maPhieuNhap);
+            } else {
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+        
+        case '/seri/create':
+            if ($requestMethod === 'POST') {
+                $seriSanPhamController = new SeriSanPhamController();
+                $seriSanPhamController->createSeri();
+            } else {
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+
+    // case '/chitietphieunhap/create':
+    case '/chitietphieunhap/create/':
+        if ($requestMethod === 'POST') {
             $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
-            $chiTietPhieuNhapController->getByMaPhieuNhap($maPhieuNhap);
+            $chiTietPhieuNhapController->createChiTietPhieuNhap();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // Bảo hành route
+    case '/baohanh':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getAllWarranties();
+        } else if ($requestMethod === 'POST') {
+            $baoHanhController->createWarranty();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/baohanh/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maBH = $matches[1];
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getWarrantyById($maBH);
+        } else if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $baoHanhController->updateWarranty($maBH);
+        } else if ($requestMethod === 'DELETE') {
+            $baoHanhController->deleteWarranty($maBH);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/baohanh/search':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getWarrantyBySerialNumber();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/baohanh/([^/]+)/chitiet$#', $apiPath, $matches) ? true : false):
+        $maBH = $matches[1];
+        if ($requestMethod === 'GET') {
+            $chiTietBaoHanhController->getByMaBH($maBH);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // Chi tiết bảo hành route
+    case '/chitietbaohanh':
+        if ($requestMethod === 'GET') {
+            $chiTietBaoHanhController->getAll();
+        } else if ($requestMethod === 'POST') {
+            $chiTietBaoHanhController->create();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/chitietbaohanh/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maCTBH = $matches[1];
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $chiTietBaoHanhController->update($maCTBH);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);

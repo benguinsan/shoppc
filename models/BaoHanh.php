@@ -151,5 +151,115 @@ class BaoHanh {
     public function generateWarrantyId() {
         return 'BH' . uniqid();
     }
+
+    public function search($page = 1, $limit = 10, $searchTerm = '', $fromDate = '', $toDate = '', $orderBy = 'MaBH', $orderDirection = 'ASC') {
+        if ($this->conn === null) {
+            throw new Exception("Kết nối database không khả dụng");
+        }
+
+        try {
+            $page = max(1, (int)$page);
+            $limit = max(1, (int)$limit);
+            $offset = ($page - 1) * $limit;
+
+            $orderDirection = strtoupper($orderDirection);
+            if ($orderDirection !== 'ASC' && $orderDirection !== 'DESC') {
+                $orderDirection = 'DESC';
+            }
+
+            $validColumns = ['MaBH', 'NgayMua', 'HanBaoHanh'];
+            if (!in_array($orderBy, $validColumns)) {
+                $orderBy = 'NgayMua';
+            }
+
+            // Query chính với JOIN
+            $query = "SELECT bh.*, 
+                            hd.MaHD,
+                            sp.TenSP,
+                            sp.MaSeri
+                     FROM " . $this->table . " bh
+                     LEFT JOIN hoadon hd ON bh.MaHD = hd.MaHD
+                     LEFT JOIN sanpham sp ON bh.MaSeri = sp.MaSeri
+                     WHERE 1=1";
+
+            // Query đếm tổng số record
+            $countQuery = "SELECT COUNT(*) as total FROM " . $this->table . " bh 
+                           LEFT JOIN hoadon hd ON bh.MaHD = hd.MaHD
+                           LEFT JOIN sanpham sp ON bh.MaSeri = sp.MaSeri
+                           WHERE 1=1";
+
+            $params = array();
+
+            // Thêm điều kiện tìm kiếm
+            if (!empty($searchTerm)) {
+                $query .= " AND (bh.MaBH LIKE :search 
+                           OR bh.MaHD LIKE :search 
+                           OR bh.MaSeri LIKE :search
+                           OR sp.TenSP LIKE :search)";
+                           
+                $countQuery .= " AND (bh.MaBH LIKE :search 
+                               OR bh.MaHD LIKE :search
+                               OR bh.MaSeri LIKE :search
+                               OR sp.TenSP LIKE :search)";
+                               
+                $params[':search'] = "%$searchTerm%";
+            }
+
+            // Lọc theo khoảng thời gian mua
+            if (!empty($fromDate)) {
+                $query .= " AND DATE(bh.NgayMua) >= :fromDate";
+                $countQuery .= " AND DATE(bh.NgayMua) >= :fromDate";
+                $params[':fromDate'] = $fromDate;
+            }
+
+            if (!empty($toDate)) {
+                $query .= " AND DATE(bh.NgayMua) <= :toDate";
+                $countQuery .= " AND DATE(bh.NgayMua) <= :toDate";
+                $params[':toDate'] = $toDate;
+            }
+
+            // Thêm sắp xếp và phân trang
+            $query .= " ORDER BY bh." . $orderBy . " " . $orderDirection;
+            $query .= " LIMIT :limit OFFSET :offset";
+
+            // Thực thi query đếm tổng số record
+            $countStmt = $this->conn->prepare($countQuery);
+            foreach($params as $key => $value) {
+                if($key != ':limit' && $key != ':offset') {
+                    $countStmt->bindValue($key, $value);
+                }
+            }
+            $countStmt->execute();
+            $totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+            // Thực thi query chính
+            $stmt = $this->conn->prepare($query);
+            foreach($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'data' => $records,
+                'pagination' => [
+                    'total' => (int)$totalRecords,
+                    'per_page' => $limit,
+                    'current_page' => $page,
+                    'last_page' => ceil($totalRecords / $limit),
+                    'from' => $offset + 1,
+                    'to' => min($offset + $limit, $totalRecords)
+                ]
+            ];
+
+        } catch (PDOException $e) {
+            error_log("Lỗi tìm kiếm bảo hành: " . $e->getMessage());
+            throw new Exception("Không thể tìm kiếm bảo hành: " . $e->getMessage());
+        }
+    }
+   
 }
 ?>
