@@ -375,5 +375,55 @@ class BaoHanh {
         // Default if no existing IDs or different format
         return 'BH001';
     }
+
+    // Update only warranty status
+    public function updateStatus($maBH, $trangThai, $ngayTraBaoHanh = null, $moTa = null) {
+        try {
+            // Xây dựng câu query
+            $query = "UPDATE " . $this->table . " SET TrangThai = :TrangThai";
+            $params = [
+                ':MaBH' => $maBH,
+                ':TrangThai' => $trangThai
+            ];
+            
+            // Nếu là trạng thái đã hoàn thành và có ngày trả, cập nhật ngày trả
+            if ($trangThai == 3 && $ngayTraBaoHanh !== null) {
+                $query .= ", NgayTraBaoHanh = :NgayTraBaoHanh";
+                $params[':NgayTraBaoHanh'] = $ngayTraBaoHanh;
+            }
+            
+            // Nếu có mô tả, cập nhật mô tả
+            if ($moTa !== null) {
+                $query .= ", MoTa = :MoTa";
+                $params[':MoTa'] = htmlspecialchars(strip_tags($moTa));
+            }
+            
+            // Hoàn thiện câu query
+            $query .= " WHERE MaBH = :MaBH";
+            
+            // Chuẩn bị và thực thi câu lệnh
+            $stmt = $this->conn->prepare($query);
+            
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            
+            if ($stmt->execute()) {
+                return [
+                    'success' => true,
+                    'message' => 'Cập nhật trạng thái bảo hành thành công'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Không thể cập nhật trạng thái bảo hành'
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Lỗi khi cập nhật trạng thái bảo hành: " . $e->getMessage());
+            throw new Exception("Không thể cập nhật trạng thái bảo hành: " . $e->getMessage());
+        }
+    }
 }
 ?>

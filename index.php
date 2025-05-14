@@ -557,6 +557,17 @@ switch ($apiPath) {
         }
         break;
         
+    case (preg_match('#^/baohanh/([^/]+)/status$#', $apiPath, $matches) ? true : false):
+        $maBH = $matches[1];
+        
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $baoHanhController->updateWarrantyStatus($maBH);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
     case (preg_match('#^/hoadon/([^/]+)/baohanh$#', $apiPath, $matches) ? true : false):
         $maHD = $matches[1];
         

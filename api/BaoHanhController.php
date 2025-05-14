@@ -529,5 +529,59 @@ class BaoHanhController {
             echo json_encode(['error' => 'Lỗi server: ' . $e->getMessage()]);
         }
     }
+
+    // Cập nhật trạng thái bảo hành
+    public function updateWarrantyStatus($id) {
+        try {
+            // Kiểm tra bảo hành có tồn tại không
+            $result = $this->baoHanhModel->getById($id);
+            if($result->rowCount() == 0) {
+                http_response_code(404);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Không tìm thấy thông tin bảo hành với mã ' . $id
+                ]);
+                return;
+            }
+            
+            // Lấy dữ liệu từ request
+            $data = json_decode(file_get_contents("php://input"));
+            
+            // Kiểm tra dữ liệu bắt buộc
+            if(!isset($data->TrangThai)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Thiếu thông tin bắt buộc: TrangThai'
+                ]);
+                return;
+            }
+            
+            // Lấy ngày trả nếu có
+            $ngayTraBaoHanh = null;
+            if(isset($data->NgayTraBaoHanh)) {
+                $ngayTraBaoHanh = $data->NgayTraBaoHanh;
+            } else if($data->TrangThai == 3) {
+                // Nếu chuyển sang trạng thái hoàn thành mà không có ngày trả, tự động dùng ngày hiện tại
+                $ngayTraBaoHanh = date('Y-m-d');
+            }
+            
+            // Lấy mô tả nếu có
+            $moTa = isset($data->MoTa) ? $data->MoTa : null;
+            
+            // Cập nhật trạng thái
+            $result = $this->baoHanhModel->updateStatus($id, $data->TrangThai, $ngayTraBaoHanh, $moTa);
+            
+            http_response_code(200);
+            echo json_encode($result);
+            
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Lỗi server: ' . $e->getMessage()
+            ]);
+        }
+    }
 }
 ?>
