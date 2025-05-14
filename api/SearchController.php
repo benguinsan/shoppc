@@ -36,7 +36,7 @@ class SearchController
 
             echo json_encode([
                 'dataSource' => $result['data'],
-                'pageNo' => $page - 1, // Convert to 0-based for frontend
+                'pageNo' => $page - 1,
                 'pageSize' => $limit,
                 'totalElements' => $result['pagination']['total'],
                 'filters_applied' => $result['filters_applied']

@@ -93,6 +93,7 @@ class SanPhamController
             // Get filter parameters from query string
             $filter = [
                 'MaLoaiSP' => $_GET['MaLoaiSP'] ?? '',
+                'TenSP' => $_GET['TenSP'] ?? '',
                 'RAM' => $_GET['RAM'] ?? '',
                 'min_price' => $_GET['min_price'] ?? '',
                 'max_price' => $_GET['max_price'] ?? ''
@@ -221,7 +222,7 @@ class SanPhamController
             return;
         }
         try {
-            $result = $this->sanPhamModel->editSanpham($data); 
+            $result = $this->sanPhamModel->editSanpham($data);
             echo json_encode([
                 'success' => true,
                 'message' => $result['message'],
