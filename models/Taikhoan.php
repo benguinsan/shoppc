@@ -41,41 +41,32 @@ class Taikhoan
             $validColumns = ['MaTK', 'TenTK', 'MaNguoiDung', 'MaNhomQuyen', 'TrangThai', 'created_at'];
 
             if (!in_array($orderBy, $validColumns)) {
-                $orderBy = 'MaTK';
+                $orderBy = 'created_at';
             }
 
             // Xây dựng câu truy vấn cơ bản
-            $query = "SELECT tk.MaTK, tk.TenTK, tk.MaNguoiDung, tk.MaNhomQuyen, tk.TrangThai, 
-                             nd.HoTen, nd.Email, nd.SDT 
-                     FROM " . $this->table_name . " tk
-                     LEFT JOIN nguoidung nd ON tk.MaNguoiDung = nd.MaNguoiDung";
+            $query = "SELECT MaTK, TenTK, MaNguoiDung, MaNhomQuyen, TrangThai
+                     FROM " . $this->table_name;
 
-            $countQuery = "SELECT COUNT(*) as total FROM " . $this->table_name . " tk
-                          LEFT JOIN nguoidung nd ON tk.MaNguoiDung = nd.MaNguoiDung";
+            $countQuery = "SELECT COUNT(*) as total FROM " . $this->table_name;
 
             $params = [];
 
             // Thêm điều kiện tìm kiếm nếu có
             if (!empty($searchTerm)) {
-                $query .= " WHERE tk.TenTK LIKE :searchTerm 
-                          OR tk.MaTK LIKE :searchTerm 
-                          OR tk.MaNhomQuyen LIKE :searchTerm
-                          OR nd.HoTen LIKE :searchTerm 
-                          OR nd.Email LIKE :searchTerm 
-                          OR nd.SDT LIKE :searchTerm";
+                $query .= " WHERE TenTK LIKE :searchTerm 
+                          OR MaTK LIKE :searchTerm 
+                          OR MaNhomQuyen LIKE :searchTerm";
 
-                $countQuery .= " WHERE tk.TenTK LIKE :searchTerm 
-                               OR tk.MaTK LIKE :searchTerm 
-                               OR tk.MaNhomQuyen LIKE :searchTerm
-                               OR nd.HoTen LIKE :searchTerm 
-                               OR nd.Email LIKE :searchTerm 
-                               OR nd.SDT LIKE :searchTerm";
+                $countQuery .= " WHERE TenTK LIKE :searchTerm 
+                               OR MaTK LIKE :searchTerm 
+                               OR MaNhomQuyen LIKE :searchTerm";
 
                 $params[':searchTerm'] = "%$searchTerm%";
             }
 
             // Thêm ORDER BY
-            $query .= " ORDER BY tk." . $orderBy . " " . $orderDirection;
+            $query .= " ORDER BY " . $orderBy . " " . $orderDirection;
             $query .= " LIMIT :limit OFFSET :offset";
 
             // Đếm tổng số bản ghi

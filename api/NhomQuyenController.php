@@ -71,26 +71,34 @@ class NhomQuyenController
         $this->checkPermission();
 
         try {
-            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+            $pageNo = isset($_GET['page']) ? (int)$_GET['page'] : 0;
+            $pageSize = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+
+            $page = $pageNo + 1;
+
             $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
             $orderBy = isset($_GET['orderBy']) ? $_GET['orderBy'] : 'created_at';
             $orderDirection = isset($_GET['orderDirection']) ? $_GET['orderDirection'] : 'DESC';
 
-            $result = $this->nhomQuyenModel->getAll($page, $limit, $searchTerm, $orderBy, $orderDirection);
-            $this->sendResponse(200, $result);
+            $result = $this->nhomQuyenModel->getAll($page, $pageSize, $searchTerm, $orderBy, $orderDirection);
+            $this->sendResponse(200, [
+                'dataSource' => $result['data'],
+                'pageNo' => $pageNo,
+                'pageSize' => $pageSize,
+                'totalElements' => $result['pagination']['total']
+            ]);
         } catch (Exception $e) {
             $this->sendResponse(500, ['error' => $e->getMessage()]);
         }
     }
 
-    public function getOne($id)
+    public function getOne($maNhomQuyen)
     {
         // Kiểm tra quyền
         $this->checkPermission();
 
         try {
-            $nhomQuyen = $this->nhomQuyenModel->getById($id);
+            $nhomQuyen = $this->nhomQuyenModel->getById($maNhomQuyen);
 
             if ($nhomQuyen) {
                 $this->sendResponse(200, $nhomQuyen);

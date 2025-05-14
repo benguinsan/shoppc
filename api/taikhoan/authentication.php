@@ -56,17 +56,9 @@ class AuthController
                     throw new Exception('Không thể lấy thông tin tài khoản sau khi tạo');
                 }
 
-                // Generate token after registration
-                $token = $this->jwtHandler->generateToken([
-                    'MaTK' => $newAccount['MaTK'],
-                    'TenTK' => $newAccount['TenTK'],
-                    'MaNhomQuyen' => $newAccount['MaNhomQuyen']
-                ]);
-
                 http_response_code(201);
                 echo json_encode([
                     'message' => 'Đăng ký tài khoản thành công',
-                    'token' => $token,
                     'MaTK' => $newAccount['MaTK'],
                     'TenTK' => $newAccount['TenTK'],
                     'MaNhomQuyen' => $newAccount['MaNhomQuyen'],

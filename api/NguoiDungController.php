@@ -249,19 +249,49 @@ class NguoiDungController
 
         try {
             // Lấy các tham số từ request
-            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+            $pageNo = isset($_GET['page']) ? (int)$_GET['page'] : 0;
+            $pageSize = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+
+            $page = $pageNo + 1;
+
+
             $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
             $orderBy = isset($_GET['order_by']) ? $_GET['order_by'] : 'created_at';
             $orderDirection = isset($_GET['order_direction']) ? $_GET['order_direction'] : 'DESC';
 
             // Gọi hàm getAll từ model NguoiDung
-            $result = $this->nguoiDungModel->getAll($page, $limit, $searchTerm, $orderBy, $orderDirection);
+            $result = $this->nguoiDungModel->getAll($page, $pageSize, $searchTerm, $orderBy, $orderDirection);
+
+            $this->sendResponse(200, [
+                'dataSource' => $result['data'],
+                'pageNo' => $pageNo,
+                'pageSize' => $pageSize,
+                'totalElements' => $result['pagination']['total']
+            ]);
+        } catch (Exception $e) {
+            $this->sendResponse(400, [
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getNguoiDungById($maNguoiDung)
+    {
+        // Kiểm tra quyền (có thể là ADMIN hoặc QLND - Quản lý người dùng)
+        $this->checkPermission('QLND');
+
+        try {
+            // Lấy thông tin người dùng theo ID
+            $nguoiDung = $this->nguoiDungModel->getById($maNguoiDung);
+
+            if (!$nguoiDung) {
+                throw new Exception('Không tìm thấy thông tin người dùng');
+            }
 
             $this->sendResponse(200, [
                 'success' => true,
-                'data' => $result['data'],
-                'pagination' => $result['pagination']
+                'data' => $nguoiDung
             ]);
         } catch (Exception $e) {
             $this->sendResponse(400, [

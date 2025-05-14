@@ -45,7 +45,7 @@ class NhomQuyen
             }
 
             $validColumns = ['MaNhomQuyen', 'TenNhomQuyen', 'created_at'];
-            
+
             if (!in_array($orderBy, $validColumns)) {
                 $orderBy = 'created_at';
             }
@@ -138,7 +138,7 @@ class NhomQuyen
             $stmt->bindParam(":MaNhomQuyen", $maNhomQuyen);
             $stmt->bindParam(":TenNhomQuyen", $data['TenNhomQuyen']);
             $stmt->execute();
-            
+
             $this->lastInsertedId = $maNhomQuyen;
 
             // Thêm các chức năng vào nhóm quyền nếu có
@@ -313,6 +313,19 @@ class NhomQuyen
     public function addFunctionsToRole($maNhomQuyen, $maChucNangs)
     {
         try {
+            // Kiểm tra xem các chức năng có tồn tại không
+            foreach ($maChucNangs as $maChucNang) {
+                $checkQuery = "SELECT COUNT(*) as count FROM chucnang WHERE MaChucNang = :MaChucNang";
+                $checkStmt = $this->conn->prepare($checkQuery);
+                $checkStmt->bindParam(":MaChucNang", $maChucNang);
+                $checkStmt->execute();
+                $result = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result['count'] == 0) {
+                    throw new Exception("Chức năng với mã '$maChucNang' không tồn tại");
+                }
+            }
+
             $query = "INSERT INTO " . $this->detail_table . " (MaNhomQuyen, MaChucNang) VALUES (:MaNhomQuyen, :MaChucNang)";
             $stmt = $this->conn->prepare($query);
 

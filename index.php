@@ -76,13 +76,13 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-    
+
     case '/auth/logout':
         if ($requestMethod === 'POST') {
             $authController->logout();
-        } 
+        }
         break;
-        
+
     case '/user/profile':
         if ($requestMethod === 'GET') {
             $nguoiDungController->getCurrentUser();
@@ -105,9 +105,11 @@ switch ($apiPath) {
         break;
 
     // nguoi dung tu vo hieu/kich hoat tai khoan co the khong can thiet
-    case '/user/deactivate':
+    case (preg_match('#^/accounts/([^/]+)/status$#', $apiPath, $matches) ? true : false):
+        $maTaiKhoan = $matches[1];
+
         if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
-            $taiKhoanController->deactivateOwnAccount();
+            $taiKhoanController->deactivateAccount($maTaiKhoan);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -117,6 +119,8 @@ switch ($apiPath) {
     case '/accounts':
         if ($requestMethod === 'GET') {
             $taiKhoanController->getAllAccounts();
+        } else if ($requestMethod === 'POST') {
+            $taiKhoanController->createAccount();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -164,6 +168,8 @@ switch ($apiPath) {
             $nguoiDungController->updateUser($maNguoiDung);
         } else if ($requestMethod === 'DELETE') {
             $nguoiDungController->deleteUser($maNguoiDung);
+        } else if ($requestMethod === 'GET') {
+            $nguoiDungController->getNguoiDungById($maNguoiDung);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -214,8 +220,6 @@ switch ($apiPath) {
     case '/chucnang':
         if ($requestMethod === 'GET') {
             $chucNangController->getAll();
-        } else if ($requestMethod === 'POST') {
-            $chucNangController->create();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -227,10 +231,6 @@ switch ($apiPath) {
 
         if ($requestMethod === 'GET') {
             $chucNangController->getOne($maChucNang);
-        } else if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
-            $chucNangController->update($maChucNang);
-        } else if ($requestMethod === 'DELETE') {
-            $chucNangController->delete($maChucNang);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -295,7 +295,7 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-        
+
     // Chi tiết hóa đơn route
     case '/chitiethoadon':
         if ($requestMethod === 'GET') {
@@ -307,7 +307,7 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-        
+
     case (preg_match('#^/chitiethoadon/([^/]+)$#', $apiPath, $matches) ? true : false):
         $maCTHD = $matches[1];
 
@@ -318,7 +318,7 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
-        
+
     case (preg_match('#^/hoadon/([^/]+)/chitiet$#', $apiPath, $matches) ? true : false):
         $maHD = $matches[1];
 

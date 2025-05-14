@@ -57,9 +57,11 @@ class SanPham
             $total_row = $total_stmt->fetch(PDO::FETCH_ASSOC);
             $total_records = $total_row['total'];
 
-            // Get products with pagination
-            $query = "SELECT * FROM " . $this->table_name . " 
-                     ORDER BY MaSP DESC 
+            // Get products with pagination, including TenLoaiSP
+            $query = "SELECT sp.*, lsp.TenLoaiSP 
+                     FROM " . $this->table_name . " sp
+                     LEFT JOIN loaisanpham lsp ON sp.MaLoaiSP = lsp.MaLoaiSP
+                     ORDER BY sp.MaSP DESC 
                      LIMIT :limit OFFSET :offset";
 
             $stmt = $this->conn->prepare($query);
@@ -88,7 +90,11 @@ class SanPham
     public function getSanPhamByMaSP($maSP)
     {
         try {
-            $query = "SELECT * FROM " . $this->table_name . " WHERE MaSP = :MaSP";
+            $query = "SELECT sp.*, lsp.TenLoaiSP 
+                     FROM " . $this->table_name . " sp
+                     LEFT JOIN loaisanpham lsp ON sp.MaLoaiSP = lsp.MaLoaiSP
+                     WHERE sp.MaSP = :MaSP";
+
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':MaSP', $maSP, PDO::PARAM_STR);
             $stmt->execute();
