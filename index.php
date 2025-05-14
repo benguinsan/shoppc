@@ -6,6 +6,7 @@ require_once './api/NhomQuyenController.php';
 require_once './api/ChucNangController.php';
 require_once './api/NhaCungCapController.php';
 require_once './api/LoaiSanPhamController.php';
+require_once './api/ThongKeController.php';
 require_once './api/taikhoan/TaiKhoanController.php';
 // Thiết lập header JSON
 header("Content-Type: application/json");
@@ -31,6 +32,7 @@ $chucNangController = new ChucNangController();
 $nhaCungCapController = new NhaCungCapController();
 $loaiSanPhamController = new LoaiSanPhamController();
 $taiKhoanController = new TaiKhoanController();
+$thongKeController = new ThongKeController();
 
 
 error_log($_SERVER['REQUEST_URI']);
@@ -276,6 +278,58 @@ switch ($apiPath) {
             $loaiSanPhamController->update($maLoaiSanPham);
         } else if ($requestMethod === 'DELETE') {
             $loaiSanPhamController->delete($maLoaiSanPham);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/thongke/ngay':
+        if ($requestMethod === 'GET') {
+            $value = $_GET['value'] ?? date('Y-m-d');
+            $thongKeController->thongKeTheoNgay($value);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/thongke/thang':
+        if ($requestMethod === 'GET') {
+            $value = $_GET['value'] ?? date('Y-m');
+            $thongKeController->thongKeTheoThang($value);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/thongke/nam':
+        if ($requestMethod === 'GET') {
+            $value = $_GET['value'] ?? date('Y');
+            $thongKeController->thongKeTheoNam($value);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/thongke/sanpham':
+        if ($requestMethod === 'GET') {
+            $type = $_GET['type'] ?? 'day';
+            $value = $_GET['value'] ?? date('Y-m-d');
+            $thongKeController->thongKeTheoSanPham($type, $value);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/thongke/loaisanpham':
+        if ($requestMethod === 'GET') {
+            $type = $_GET['type'] ?? 'day';
+            $value = $_GET['value'] ?? date('Y-m-d');
+            $thongKeController->thongKeTheoLoaiSanPham($type, $value);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
