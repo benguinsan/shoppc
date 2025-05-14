@@ -117,16 +117,42 @@ class SanPham
             // Base query for fetching records
             $query = "SELECT * FROM " . $this->table_name . " WHERE TrangThai = TRUE";
 
+            // Add TenSP condition if present
+            if (isset($filter['TenSP']) && $filter['TenSP'] !== '') {
+                $conditions[] = "TenSP LIKE :TenSP";
+                $params[':TenSP'] = '%' . $filter['TenSP'] . '%';
+            }
+
             // Add MaLoaiSP condition if present
             if (isset($filter['MaLoaiSP']) && $filter['MaLoaiSP'] !== '') {
-                $conditions[] = "MaLoaiSP = :MaLoaiSP";
-                $params[':MaLoaiSP'] = $filter['MaLoaiSP'];
+                if (strpos($filter['MaLoaiSP'], ',') !== false) {
+                    // Split MaLoaiSP values by comma
+                    $loaiSpValues = explode(',', $filter['MaLoaiSP']);
+                    $loaiSpConditions = [];
+                    foreach ($loaiSpValues as $index => $value) {
+                        $paramName = ':MaLoaiSP' . $index;
+                        $loaiSpConditions[] = "MaLoaiSP = $paramName";
+                        $params[$paramName] = trim($value);
+                    }
+                    $conditions[] = '(' . implode(' OR ', $loaiSpConditions) . ')';
+                } else {
+                    // Single category
+                    $conditions[] = "MaLoaiSP = :MaLoaiSP";
+                    $params[':MaLoaiSP'] = $filter['MaLoaiSP'];
+                }
             }
 
             // Add RAM condition if present
             if (isset($filter['RAM']) && $filter['RAM'] !== '') {
-                $conditions[] = "RAM = :RAM";
-                $params[':RAM'] = $filter['RAM'];
+                // Split RAM values by comma
+                $ramValues = explode(',', $filter['RAM']);
+                $ramConditions = [];
+                foreach ($ramValues as $index => $value) {
+                    $paramName = ':RAM' . $index;
+                    $ramConditions[] = "RAM LIKE $paramName";
+                    $params[$paramName] = '%' . trim($value) . '%';
+                }
+                $conditions[] = '(' . implode(' OR ', $ramConditions) . ')';
             }
 
             // Add min_price condition if present
@@ -215,7 +241,7 @@ class SanPham
 
             $query = "INSERT INTO " . $this->table_name . " 
             SET MaSP=:MaSP, MaLoaiSP=:MaLoaiSP, TenSP=:TenSP, MoTa=:MoTa, 
-            CPU=:CPU, RAM=:RAM, GPU=:GPU, Storage=:Storage, ManHinh=:ManHinh, 
+            CPU=:CPU, RAM=:RAM, GPU=:GPU, Storage=:Storage, tg_baohanh=:tg_baohanh, ManHinh=:ManHinh, 
             Gia=:Gia, ImgUrl=:ImgUrl, TrangThai=:TrangThai";
 
             $stmt = $this->conn->prepare($query);
@@ -233,6 +259,7 @@ class SanPham
             $stmt->bindParam(':Storage', $data['Storage']);
             $stmt->bindParam(':ManHinh', $data['ManHinh']);
             $stmt->bindParam(':Gia', $data['Gia']);
+            $stmt->bindParam(':tg_baohanh', $data['tg_baohanh']);
             $stmt->bindParam(':ImgUrl', $data['ImgUrl']);
             $stmt->bindParam(':TrangThai', $data['TrangThai']);
 
@@ -271,6 +298,7 @@ class SanPham
             Storage=:Storage, 
             ManHinh=:ManHinh, 
             Gia=:Gia, 
+            tg_baohanh=:tg_baohanh,
             ImgUrl=:ImgUrl, 
             TrangThai=:TrangThai 
             WHERE MaSP=:MaSP";
@@ -290,6 +318,7 @@ class SanPham
             $stmt->bindParam(':Storage', $data['Storage']);
             $stmt->bindParam(':ManHinh', $data['ManHinh']);
             $stmt->bindParam(':Gia', $data['Gia']);
+            $stmt->bindParam('tg_baohanh', $data['tg_baohanh']);
             $stmt->bindParam(':ImgUrl', $data['ImgUrl']);
             $stmt->bindParam(':TrangThai', $data['TrangThai']);
 

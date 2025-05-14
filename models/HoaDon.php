@@ -6,6 +6,7 @@ class HoaDon {
     private $conn;
     private $table_name = "hoadon";
     private $table_name_taikhoan = "taikhoan";
+    private $table_chitiet = 'chitiethoadon';
     private $lastInsertedId;
 
     public function __construct($connection = null) {
@@ -516,5 +517,100 @@ class HoaDon {
             error_log("Lỗi cập nhật hóa đơn: " . $e->getMessage());
             throw new Exception("Không thể cập nhật hóa đơn: " . $e->getMessage());
         }
+    }
+
+    //  // Get total sales by date range
+    //  public function getTotalSalesByDateRange($startDate, $endDate) {
+    //     $query = "SELECT SUM(TongTien) as TotalSales FROM " . $this->table . " 
+    //               WHERE NgayLap BETWEEN :startDate AND :endDate
+    //               AND TrangThai = 'Đã thanh toán'";
+                  
+    //     $stmt = $this->conn->prepare($query);
+    //     $stmt->bindParam(':startDate', $startDate);
+    //     $stmt->bindParam(':endDate', $endDate);
+    //     $stmt->execute();
+        
+    //     $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    //     return $row['TotalSales'] ?? 0;
+    // }
+
+    // Generate a unique invoice ID
+    public function generateInvoiceId() {
+        return 'HD' . uniqid();
+    }
+
+    // Thống kê theo ngày (chuẩn, không nhân tổng tiền khi join)
+    public function thongKeTheoNgay($date) {
+        $query = "SELECT 
+                    (SELECT SUM(TongTien) FROM hoadon WHERE DATE(NgayLap) = :date) as DoanhThu,
+                    (SELECT COUNT(*) FROM hoadon WHERE DATE(NgayLap) = :date) as SoDonHang,
+                    (SELECT COUNT(*) FROM chitiethoadon WHERE MaHD IN (SELECT MaHD FROM hoadon WHERE DATE(NgayLap) = :date)) as SoLuongBan";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':date', $date);
+        $stmt->execute();
+        return $stmt;
+    }
+
+    // Thống kê theo tháng (chuẩn, không nhân tổng tiền khi join)
+    public function thongKeTheoThang($month) {
+        $query = "SELECT 
+                    (SELECT SUM(TongTien) FROM hoadon WHERE DATE_FORMAT(NgayLap, '%Y-%m') = :month) as DoanhThu,
+                    (SELECT COUNT(*) FROM hoadon WHERE DATE_FORMAT(NgayLap, '%Y-%m') = :month) as SoDonHang,
+                    (SELECT COUNT(*) FROM chitiethoadon WHERE MaHD IN (SELECT MaHD FROM hoadon WHERE DATE_FORMAT(NgayLap, '%Y-%m') = :month)) as SoLuongBan";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':month', $month);
+        $stmt->execute();
+        return $stmt;
+    }
+
+    // Thống kê theo năm (chuẩn, không nhân tổng tiền khi join)
+    public function thongKeTheoNam($year) {
+        $query = "SELECT 
+                    (SELECT SUM(TongTien) FROM hoadon WHERE YEAR(NgayLap) = :year) as DoanhThu,
+                    (SELECT COUNT(*) FROM hoadon WHERE YEAR(NgayLap) = :year) as SoDonHang,
+                    (SELECT COUNT(*) FROM chitiethoadon WHERE MaHD IN (SELECT MaHD FROM hoadon WHERE YEAR(NgayLap) = :year)) as SoLuongBan";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':year', $year);
+        $stmt->execute();
+        return $stmt;
+    }
+
+    // Thống kê theo sản phẩm (có tên sản phẩm)
+    public function thongKeTheoSanPham($type, $value) {
+        $where = '';
+        if ($type === 'day') $where = "WHERE DATE(h.NgayLap) = :value";
+        if ($type === 'month') $where = "WHERE DATE_FORMAT(h.NgayLap, '%Y-%m') = :value";
+        if ($type === 'year') $where = "WHERE YEAR(h.NgayLap) = :value";
+        $query = "SELECT ct.MaSP, s.TenSP, COUNT(*) as SoLuongBan, SUM(ct.DonGia) as DoanhThu
+                  FROM hoadon h
+                  JOIN chitiethoadon ct ON h.MaHD = ct.MaHD
+                  JOIN sanpham s ON ct.MaSP = s.MaSP
+                  $where
+                  GROUP BY ct.MaSP, s.TenSP
+                  ORDER BY DoanhThu DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':value', $value);
+        $stmt->execute();
+        return $stmt;
+    }
+
+    // Thống kê theo loại sản phẩm (có tên loại sản phẩm)
+    public function thongKeTheoLoaiSanPham($type, $value) {
+        $where = '';
+        if ($type === 'day') $where = "WHERE DATE(h.NgayLap) = :value";
+        if ($type === 'month') $where = "WHERE DATE_FORMAT(h.NgayLap, '%Y-%m') = :value";
+        if ($type === 'year') $where = "WHERE YEAR(h.NgayLap) = :value";
+        $query = "SELECT l.MaLoaiSP, l.TenLoaiSP, SUM(ct.DonGia) as DoanhThu, COUNT(*) as SoLuongBan
+                  FROM hoadon h
+                  JOIN chitiethoadon ct ON h.MaHD = ct.MaHD
+                  JOIN sanpham s ON ct.MaSP = s.MaSP
+                  JOIN loaisanpham l ON s.MaLoaiSP = l.MaLoaiSP
+                  $where
+                  GROUP BY l.MaLoaiSP, l.TenLoaiSP
+                  ORDER BY DoanhThu DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':value', $value);
+        $stmt->execute();
+        return $stmt;
     }
 } 

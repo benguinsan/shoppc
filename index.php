@@ -20,6 +20,7 @@ require_once './api/BaoHanhController.php';
 require_once './api/ChiTietBaoHanhController.php';
 
 
+require_once './api/SearchController.php';
 // Thiết lập header JSON
 header("Content-Type: application/json");
 
@@ -52,6 +53,7 @@ $loaiSanPhamController = new LoaiSanPhamController();
 $taiKhoanController = new TaiKhoanController();
 $sanphamController = new SanPhamController();
 $thongKeController = new ThongKeController();
+$searchController = new SearchController();
 $vnpayController = new VNPayController();
 $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
 $baoHanhController = new BaoHanhController();
@@ -367,6 +369,16 @@ switch ($apiPath) {
         }
         break;
 
+    case (preg_match('#^/loaisanpham/([^/]+)/get$#', $apiPath, $matches) ? true : false):
+        $maLoaiSP = $matches[1];
+        if ($requestMethod === 'GET') {
+            $loaiSanPhamController->getOne($maLoaiSP);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
     case (preg_match('#^/loaisanpham/([^/]+)$#', $apiPath, $matches) ? true : false):
         $maLoaiSanPham = $matches[1];
 
@@ -380,6 +392,82 @@ switch ($apiPath) {
         }
         break;
 
+    // San pham route
+    case '/search':
+        if ($requestMethod === 'GET') {
+            $searchController->handleSearch();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/sanpham/banner':
+        if ($requestMethod === 'GET') {
+            $sanphamController->getBannerProduct();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+    
+    case '/sanpham/filter':
+            if ($requestMethod === 'GET') {
+                $sanphamController->getFilterProduct();
+            } else {
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+    
+    case '/sanpham':
+        if ($requestMethod === 'GET') {
+            $sanphamController->getAllByPage();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+    
+    case '/sanpham/create':
+        if ($requestMethod === 'POST') {
+            $sanphamController->createSanPham();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+    
+    case '/sanpham/update':
+            if ($requestMethod === 'PUT') {
+                $sanphamController->capnhatSanPham();
+            } else {
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+    
+    case '/sanpham/status':
+            if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+                $sanphamController->changeStatus();
+            } else {
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+    
+    case (preg_match('#^/sanpham/([^/]+)$#', $apiPath, $matches) ? true : false):
+            $maSP = $matches[1];
+    
+            if ($requestMethod === 'GET') {
+                $sanphamController->getSanPhamByMaSP($maSP);
+            } else {
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+            }
+            break;
+
+    // Thong ke route
     case '/thongke/ngay':
         if ($requestMethod === 'GET') {
             $value = $_GET['value'] ?? date('Y-m-d');
@@ -431,7 +519,25 @@ switch ($apiPath) {
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
+    // VNPay routes
+    case '/payment/vnpay/create':
+        if ($requestMethod === 'POST') {
+            $vnpayController->createPayment();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
 
+    case '/payment/vnpay/return':
+        if ($requestMethod === 'GET') {
+            $vnpayController->paymentReturn();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+    
     // PHIẾU NHẬP ROUTES
     case '/phieunhap':
         $phieuNhapController = new PhieuNhapController();
@@ -498,7 +604,7 @@ switch ($apiPath) {
         }
         break;
 
-    // Bảo hành route - Loại bỏ các endpoint trùng lặp
+    // Bảo hành route
     case '/baohanh':
         if ($requestMethod === 'GET') {
             $baoHanhController->getAllWarranties();
@@ -626,7 +732,8 @@ switch ($apiPath) {
         }
         break;
 
-    default:
+    
+        default:
         http_response_code(404);
         echo json_encode(['error' => 'Endpoint not found', 'path' => $apiPath]);
         break;
