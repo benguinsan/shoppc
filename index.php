@@ -55,7 +55,6 @@ $thongKeController = new ThongKeController();
 $vnpayController = new VNPayController();
 $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
 $baoHanhController = new BaoHanhController();
-$baoHanhController = new BaoHanhController();
 $chiTietBaoHanhController = new ChiTietBaoHanhController();
 
 error_log($_SERVER['REQUEST_URI']);
@@ -460,33 +459,33 @@ switch ($apiPath) {
     case '/chitietphieunhap':
         $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
         if ($requestMethod === 'GET') {
-            $chiTietPhieuNhapController->getAll(); 
+            $chiTietPhieuNhapController->getAll();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
         }
         break;
 
-        case (preg_match('#^/chitietphieunhap/([^/]+)$#', $apiPath, $matches) ? true : false):
-            $maPhieuNhap = $matches[1];
-            if ($requestMethod === 'GET') {
-                $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
-                $chiTietPhieuNhapController->getByMaPhieuNhap($maPhieuNhap);
-            } else {
-                http_response_code(405);
-                echo json_encode(['error' => 'Method not allowed']);
-            }
-            break;
-        
-        case '/seri/create':
-            if ($requestMethod === 'POST') {
-                $seriSanPhamController = new SeriSanPhamController();
-                $seriSanPhamController->createSeri();
-            } else {
-                http_response_code(405);
-                echo json_encode(['error' => 'Method not allowed']);
-            }
-            break;
+    case (preg_match('#^/chitietphieunhap/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maPhieuNhap = $matches[1];
+        if ($requestMethod === 'GET') {
+            $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
+            $chiTietPhieuNhapController->getByMaPhieuNhap($maPhieuNhap);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/seri/create':
+        if ($requestMethod === 'POST') {
+            $seriSanPhamController = new SeriSanPhamController();
+            $seriSanPhamController->createSeri();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
 
     // case '/chitietphieunhap/create':
     case '/chitietphieunhap/create/':
@@ -499,7 +498,7 @@ switch ($apiPath) {
         }
         break;
 
-    // Bảo hành route
+    // Bảo hành route - Loại bỏ các endpoint trùng lặp
     case '/baohanh':
         if ($requestMethod === 'GET') {
             $baoHanhController->getAllWarranties();
@@ -511,8 +510,45 @@ switch ($apiPath) {
         }
         break;
 
+    case '/baohanh/search':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getWarrantyBySerialNumber();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/baohanh/status':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getWarrantiesByStatus();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/baohanh/check-eligibility':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->checkEligibility();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case '/baohanh/check-by-invoice-serial':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->checkWarrantyByInvoiceAndSerial();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
     case (preg_match('#^/baohanh/([^/]+)$#', $apiPath, $matches) ? true : false):
         $maBH = $matches[1];
+
         if ($requestMethod === 'GET') {
             $baoHanhController->getWarrantyById($maBH);
         } else if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
@@ -525,9 +561,33 @@ switch ($apiPath) {
         }
         break;
 
-    case '/baohanh/search':
+    case (preg_match('#^/baohanh/([^/]+)/status$#', $apiPath, $matches) ? true : false):
+        $maBH = $matches[1];
+
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $baoHanhController->updateWarrantyStatus($maBH);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/baohanh/([^/]+)/soft-delete$#', $apiPath, $matches) ? true : false):
+        $maBH = $matches[1];
+
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $baoHanhController->softDeleteWarranty($maBH);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/hoadon/([^/]+)/baohanh$#', $apiPath, $matches) ? true : false):
+        $maHD = $matches[1];
+
         if ($requestMethod === 'GET') {
-            $baoHanhController->getWarrantyBySerialNumber();
+            $baoHanhController->getWarrantiesByInvoiceId($maHD);
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -560,112 +620,6 @@ switch ($apiPath) {
         $maCTBH = $matches[1];
         if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
             $chiTietBaoHanhController->update($maCTBH);
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-
-    // Bảo hành routes
-    case '/baohanh':
-        if ($requestMethod === 'GET') {
-            $baoHanhController->getAllWarranties();
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-        
-    case '/baohanh/status':
-        if ($requestMethod === 'GET') {
-            $baoHanhController->getWarrantiesByStatus();
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-        
-    case '/baohanh/serial':
-        if ($requestMethod === 'GET') {
-            $baoHanhController->getWarrantyBySerialNumber();
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-        
-    case '/baohanh/check-eligibility':
-        if ($requestMethod === 'GET') {
-            $baoHanhController->checkEligibility();
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-        
-    case '/baohanh/check-by-invoice-serial':
-        if ($requestMethod === 'GET') {
-            $baoHanhController->checkWarrantyByInvoiceAndSerial();
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-        
-    case (preg_match('#^/baohanh/([^/]+)$#', $apiPath, $matches) ? true : false):
-        $maBH = $matches[1];
-        
-        if ($requestMethod === 'GET') {
-            $baoHanhController->getWarrantyById($maBH);
-        } else if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
-            $baoHanhController->updateWarranty($maBH);
-        } else if ($requestMethod === 'DELETE') {
-            $baoHanhController->deleteWarranty($maBH);
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-        
-    case (preg_match('#^/baohanh/([^/]+)/status$#', $apiPath, $matches) ? true : false):
-        $maBH = $matches[1];
-        
-        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
-            $baoHanhController->updateWarrantyStatus($maBH);
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-        
-    case (preg_match('#^/baohanh/([^/]+)/soft-delete$#', $apiPath, $matches) ? true : false):
-        $maBH = $matches[1];
-        
-        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
-            $baoHanhController->softDeleteWarranty($maBH);
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-        
-    case (preg_match('#^/hoadon/([^/]+)/baohanh$#', $apiPath, $matches) ? true : false):
-        $maHD = $matches[1];
-        
-        if ($requestMethod === 'GET') {
-            $baoHanhController->getWarrantiesByInvoiceId($maHD);
-        } else {
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-        }
-        break;
-
-    // Bảo hành
-    case '/api/baohanh':
-        if ($requestMethod === 'GET') {
-            $baoHanhController->getAllWarranties();
-        } else if ($requestMethod === 'POST') {
-            $baoHanhController->createWarranty();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
