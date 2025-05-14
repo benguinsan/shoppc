@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/Database.php';
 class HoaDon {
     private $conn;
     private $table_name = "hoadon";
+    private $table_name_taikhoan = "taikhoan";
     private $lastInsertedId;
 
     public function __construct($connection = null) {
@@ -178,6 +179,29 @@ class HoaDon {
                 return 'Không xác định';
         }
     }
+    
+    public function getMaNguoiDungFromMaTK($maTK) {
+        if ($this->conn === null) {
+            throw new Exception("Kết nối database không khả dụng");
+        }
+
+        try {
+            $query = "SELECT MaNguoiDung FROM " . $this->table_name_taikhoan . " WHERE MaTK = :MaTK";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaTK", $maTK);
+            $stmt->execute();
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                return $result['MaNguoiDung'];
+            } else {
+                return null;
+            }
+        } catch (PDOException $e) {
+            error_log("Lỗi lấy MaNguoiDung từ MaTK: " . $e->getMessage());
+            throw new Exception("Không thể lấy thông tin người dùng từ tài khoản: " . $e->getMessage());
+        }
+    }
 
     public function create($data) {
         if ($this->conn === null) {
@@ -185,6 +209,17 @@ class HoaDon {
         }
 
         try {
+            // Nếu có MaTK nhưng không có MaNguoiDung, lấy MaNguoiDung từ MaTK
+            if (isset($data['MaTK']) && !isset($data['MaNguoiDung'])) {
+                $maNguoiDung = $this->getMaNguoiDungFromMaTK($data['MaTK']);
+                if ($maNguoiDung === null) {
+                    throw new Exception("Không tìm thấy người dùng với mã tài khoản {$data['MaTK']}.");
+                }
+                $data['MaNguoiDung'] = $maNguoiDung;
+                // Xóa MaTK khỏi data vì không cần lưu vào bảng hóa đơn
+                unset($data['MaTK']);
+            }
+
             // Kiểm tra người dùng có tồn tại không
             $checkUserQuery = "SELECT COUNT(*) as count FROM nguoidung WHERE MaNguoiDung = :MaNguoiDung";
             $checkUserStmt = $this->conn->prepare($checkUserQuery);
@@ -196,18 +231,8 @@ class HoaDon {
                 throw new Exception("Người dùng với mã {$data['MaNguoiDung']} không tồn tại.");
             }
             
-            // Kiểm tra nhân viên có tồn tại không (nếu có)
-            if (isset($data['MaNhanVien']) && $data['MaNhanVien'] !== null) {
-                $checkStaffQuery = "SELECT COUNT(*) as count FROM nguoidung WHERE MaNguoiDung = :MaNhanVien";
-                $checkStaffStmt = $this->conn->prepare($checkStaffQuery);
-                $checkStaffStmt->bindParam(":MaNhanVien", $data['MaNhanVien']);
-                $checkStaffStmt->execute();
-                $staffCount = $checkStaffStmt->fetch(PDO::FETCH_ASSOC)['count'];
-                
-                if ($staffCount == 0) {
-                    throw new Exception("Nhân viên với mã {$data['MaNhanVien']} không tồn tại.");
-                }
-            }
+            // Luôn đặt MaNhanVien là null
+            $data['MaNhanVien'] = null;
 
             // Kiểm tra cấu trúc của bảng hóa đơn
             $tableStructureQuery = "DESCRIBE " . $this->table_name;
