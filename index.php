@@ -14,6 +14,7 @@ require_once './api/PhieuNhapController.php';
 require_once './api/SanPhamController.php';
 require_once './api/VNPayController.php';
 require_once './api/ChiTietPhieuNhapController.php';
+require_once './api/BaoHanhController.php';
 
 // Thiết lập header JSON
 header("Content-Type: application/json");
@@ -48,6 +49,7 @@ $taiKhoanController = new TaiKhoanController();
 $sanphamController = new SanPhamController();
 $vnpayController = new VNPayController();
 $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
+$baoHanhController = new BaoHanhController();
 
 error_log($_SERVER['REQUEST_URI']);
 
@@ -495,6 +497,81 @@ switch ($apiPath) {
         if ($requestMethod === 'GET') {
             $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
             $chiTietPhieuNhapController->getByMaPhieuNhap($maPhieuNhap);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // Bảo hành routes
+    case '/baohanh':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getAllWarranties();
+        } else if ($requestMethod === 'POST') {
+            $baoHanhController->createWarranty();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    case '/baohanh/status':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getWarrantiesByStatus();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    case '/baohanh/serial':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getWarrantyBySerialNumber();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    case '/baohanh/check-eligibility':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->checkEligibility();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    case (preg_match('#^/baohanh/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maBH = $matches[1];
+        
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getWarrantyById($maBH);
+        } else if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $baoHanhController->updateWarranty($maBH);
+        } else if ($requestMethod === 'DELETE') {
+            $baoHanhController->deleteWarranty($maBH);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    case (preg_match('#^/hoadon/([^/]+)/baohanh$#', $apiPath, $matches) ? true : false):
+        $maHD = $matches[1];
+        
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getWarrantiesByInvoiceId($maHD);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    // Bảo hành
+    case '/api/baohanh':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->getAllWarranties();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
