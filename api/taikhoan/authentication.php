@@ -56,17 +56,9 @@ class AuthController
                     throw new Exception('Không thể lấy thông tin tài khoản sau khi tạo');
                 }
 
-                // Generate token after registration
-                $token = $this->jwtHandler->generateToken([
-                    'MaTK' => $newAccount['MaTK'],
-                    'TenTK' => $newAccount['TenTK'],
-                    'MaNhomQuyen' => $newAccount['MaNhomQuyen']
-                ]);
-
                 http_response_code(201);
                 echo json_encode([
                     'message' => 'Đăng ký tài khoản thành công',
-                    'token' => $token,
                     'MaTK' => $newAccount['MaTK'],
                     'TenTK' => $newAccount['TenTK'],
                     'MaNhomQuyen' => $newAccount['MaNhomQuyen'],
@@ -158,6 +150,31 @@ class AuthController
         } catch (Exception $e) {
             http_response_code(401);
             echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    public function logout()
+    {
+        try {
+            // Kiểm tra xem có token trong header không
+            $headers = getallheaders();
+            $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+
+            if (empty($authHeader) || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                // Nếu không có token, vẫn trả về thành công vì người dùng đã đăng xuất
+                http_response_code(200);
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Đăng xuất thành công'
+                ]);
+                return;
+            }
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
         }
     }
 }

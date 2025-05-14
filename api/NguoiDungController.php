@@ -249,19 +249,24 @@ class NguoiDungController
 
         try {
             // Lấy các tham số từ request
-            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+            $pageNo = isset($_GET['page']) ? (int)$_GET['page'] : 0;
+            $pageSize = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+
+            $page = $pageNo + 1;
+
+
             $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
             $orderBy = isset($_GET['order_by']) ? $_GET['order_by'] : 'created_at';
             $orderDirection = isset($_GET['order_direction']) ? $_GET['order_direction'] : 'DESC';
 
             // Gọi hàm getAll từ model NguoiDung
-            $result = $this->nguoiDungModel->getAll($page, $limit, $searchTerm, $orderBy, $orderDirection);
+            $result = $this->nguoiDungModel->getAll($page, $pageSize, $searchTerm, $orderBy, $orderDirection);
 
             $this->sendResponse(200, [
-                'success' => true,
-                'data' => $result['data'],
-                'pagination' => $result['pagination']
+                'dataSource' => $result['data'],
+                'pageNo' => $pageNo,
+                'pageSize' => $pageSize,
+                'totalElements' => $result['pagination']['total']
             ]);
         } catch (Exception $e) {
             $this->sendResponse(400, [
@@ -270,4 +275,46 @@ class NguoiDungController
             ]);
         }
     }
+
+    public function getNguoiDungById($maNguoiDung)
+    {
+        // Kiểm tra quyền (có thể là ADMIN hoặc QLND - Quản lý người dùng)
+        $this->checkPermission('QLND');
+
+        try {
+            // Lấy thông tin người dùng theo ID
+            $nguoiDung = $this->nguoiDungModel->getById($maNguoiDung);
+
+            if (!$nguoiDung) {
+                throw new Exception('Không tìm thấy thông tin người dùng');
+            }
+
+            $this->sendResponse(200, [
+                'success' => true,
+                'data' => $nguoiDung
+            ]);
+        } catch (Exception $e) {
+            $this->sendResponse(400, [
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getNhanVien() {
+        try {
+            $db = new Database();
+            $conn = $db->getConnection();
+            $query = "SELECT nd.MaNguoiDung, nd.HoTen FROM nguoidung nd JOIN taikhoan tk ON nd.MaNguoiDung = tk.MaNguoiDung WHERE tk.MaNhomQuyen = 'NHANVIEN' AND tk.TrangThai = 1";
+            $stmt = $conn->prepare($query);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            http_response_code(200);
+            echo json_encode(['status' => 'success', 'data' => $result]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
 }

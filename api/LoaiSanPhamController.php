@@ -65,6 +65,31 @@ class LoaiSanPhamController
         */
     }
 
+    public function getOne($maLoaiSP)
+    {
+        // Kiểm tra quyền
+        $this->checkPermission('QLLSP');
+
+        try {
+            $loaiSanPham = $this->loaiSanPhamModel->getById($maLoaiSP);
+
+            if (!$loaiSanPham) {
+                throw new Exception("Không tìm thấy loại sản phẩm với mã: $maLoaiSP");
+            }
+
+            $this->sendResponse(200, [
+                'success' => true,
+                'message' => 'Lấy thông tin loại sản phẩm thành công',
+                'data' => $loaiSanPham
+            ]);
+        } catch (Exception $e) {
+            $this->sendResponse(404, [
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
     public function getAll()
     {
         // Kiểm tra quyền

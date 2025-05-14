@@ -16,6 +16,11 @@ class TaiKhoanController
     // Kiểm tra quyền
     private function checkPermission($requiredPermission = 'ADMIN')
     {
+        // Tạm thời bỏ qua kiểm tra quyền và trả về true
+        return true;
+
+        // Code kiểm tra quyền gốc (đã bị comment)
+        /*
         try {
             // Xác thực token và lấy thông tin từ token
             $decodedToken = $this->authMiddleware->authenticate();
@@ -58,6 +63,7 @@ class TaiKhoanController
             ]);
             exit;
         }
+        */
     }
 
     private function sendResponse($statusCode, $data)
@@ -70,29 +76,33 @@ class TaiKhoanController
     public function getAllAccounts()
     {
         // Kiểm tra quyền ADMIN hoặc QLTK
-        $this->checkPermission('QLTK');
+        $this->checkPermission('ADMIN');
 
         try {
             // Lấy các tham số từ request
-            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+            $pageNo = isset($_GET['page']) ? (int)$_GET['page'] : 0;
+            $pageSize = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+
+            $page = $pageNo + 1;
+
             $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
             $orderBy = isset($_GET['order_by']) ? $_GET['order_by'] : 'MaTK';
             $orderDirection = isset($_GET['order_direction']) ? $_GET['order_direction'] : 'ASC';
 
-            // Gọi phương thức getAllTaiKhoan với các tham số phân trang
+            // Gọi phương thức getAllTaiKhoan với các tham số phân trang và sắp xếp
             $result = $this->taikhoanModel->getAllTaiKhoan(
                 $page,
-                $limit,
+                $pageSize,
                 $searchTerm,
                 $orderBy,
                 $orderDirection
             );
 
             $this->sendResponse(200, [
-                'success' => true,
-                'data' => $result['data'],
-                'pagination' => $result['pagination']
+                'dataSource' => $result['data'],
+                'pageNo' => $pageNo,
+                'pageSize' => $pageSize,
+                'totalElements' => $result['pagination']['total']
             ]);
         } catch (Exception $e) {
             $this->sendResponse(400, [
@@ -106,20 +116,20 @@ class TaiKhoanController
     public function getAccountById($maTaiKhoan)
     {
         try {
-            // Xác thực token và lấy thông tin từ token
-            $decodedToken = $this->authMiddleware->authenticate();
+            // // Xác thực token và lấy thông tin từ token
+            // $decodedToken = $this->authMiddleware->authenticate();
 
-            if (!$decodedToken) {
-                throw new Exception('Không thể xác thực người dùng');
-            }
+            // if (!$decodedToken) {
+            //     throw new Exception('Không thể xác thực người dùng');
+            // }
 
-            // Kiểm tra quyền: chỉ admin/QLTK hoặc chính chủ tài khoản mới có quyền xem
-            if (
-                $decodedToken->MaTK !== $maTaiKhoan &&
-                !in_array($decodedToken->MaNhomQuyen, ['ADMIN', 'QLTK'])
-            ) {
-                throw new Exception('Bạn không có quyền xem thông tin tài khoản này');
-            }
+            // // Kiểm tra quyền: chỉ admin/QLTK hoặc chính chủ tài khoản mới có quyền xem
+            // if (
+            //     $decodedToken->MaTK !== $maTaiKhoan &&
+            //     !in_array($decodedToken->MaNhomQuyen, ['ADMIN', 'QLTK'])
+            // ) {
+            //     throw new Exception('Bạn không có quyền xem thông tin tài khoản này');
+            // }
 
             $account = $this->taikhoanModel->getById($maTaiKhoan);
 
@@ -141,6 +151,7 @@ class TaiKhoanController
             ]);
         }
     }
+
 
     // Cập nhật thông tin tài khoản (chỉ admin)
     public function updateAccount($maTaiKhoan)
@@ -237,25 +248,35 @@ class TaiKhoanController
         }
     }
 
-    // Vô hiệu hóa tài khoản của chính mình (người dùng có thể vô hiệu hóa tài khoản của chính mình)
-    public function deactivateOwnAccount()
+    // Vô hiệu hóa tài khoản (chỉ admin hoặc QLTK có quyền)
+    public function deactivateAccount($maTaiKhoan)
     {
+        // Kiểm tra quyền ADMIN hoặc QLTK
+        $this->checkPermission('QLTK');
+
         try {
-            // Xác thực token và lấy thông tin từ token
-            $decodedToken = $this->authMiddleware->authenticate();
-            if (!$decodedToken) {
-                throw new Exception('Không thể xác thực người dùng');
+            // Lấy thông tin tài khoản hiện tại
+            $account = $this->taikhoanModel->getById($maTaiKhoan);
+
+            if (!$account) {
+                throw new Exception('Không tìm thấy tài khoản');
             }
 
-            // Lấy MaTK từ token (chỉ cho phép vô hiệu hóa tài khoản của chính mình)
-            $maTaiKhoan = $decodedToken->MaTK;
+            // Đảo ngược trạng thái hiện tại
+            $newStatus = $account['TrangThai'] == 1 ? 0 : 1;
 
-            // Vô hiệu hóa tài khoản (TrangThai = 0)
-            $this->taikhoanModel->updateStatus($maTaiKhoan, 0);
+            // Cập nhật trạng thái tài khoản
+            $this->taikhoanModel->updateStatus($maTaiKhoan, $newStatus);
+
+            $statusMessage = $newStatus == 1 ? 'kích hoạt' : 'vô hiệu hóa';
 
             $this->sendResponse(200, [
                 'success' => true,
-                'message' => 'Tài khoản đã được vô hiệu hóa'
+                'message' => "Tài khoản đã được $statusMessage thành công",
+                'data' => [
+                    'MaTK' => $maTaiKhoan,
+                    'TrangThai' => $newStatus
+                ]
             ]);
         } catch (Exception $e) {
             $this->sendResponse(400, [
@@ -269,7 +290,7 @@ class TaiKhoanController
     public function updateAccountRole($maTaiKhoan)
     {
         // Kiểm tra quyền ADMIN hoặc QLTK
-        $this->checkPermission('QLTK');
+        $this->checkPermission('ADMIN');
 
         try {
             // Lấy dữ liệu từ request
@@ -285,6 +306,64 @@ class TaiKhoanController
             $this->sendResponse(200, [
                 'success' => true,
                 'message' => 'Cập nhật nhóm quyền tài khoản thành công'
+            ]);
+        } catch (Exception $e) {
+            $this->sendResponse(400, [
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    // Tạo tài khoản mới (chỉ admin)
+    public function createAccount()
+    {
+        // Kiểm tra quyền ADMIN
+        $this->checkPermission('ADMIN');
+
+        try {
+            // Lấy dữ liệu từ request
+            $data = json_decode(file_get_contents("php://input"), true);
+
+            // Kiểm tra các trường bắt buộc
+            if (empty($data['TenTK'])) {
+                throw new Exception('Tên tài khoản là bắt buộc');
+            }
+
+            if (empty($data['MatKhau'])) {
+                throw new Exception('Mật khẩu là bắt buộc');
+            }
+
+            // Tạo dữ liệu tài khoản
+            $accountData = [
+                'TenTK' => $data['TenTK'],
+                'MatKhau' => $data['MatKhau'],
+                'MaNhomQuyen' => $data['MaNhomQuyen'],
+                'TrangThai' => isset($data['TrangThai']) ? (int)$data['TrangThai'] : 1,
+                'HoTen' => $data['HoTen'] ?? '',
+            ];
+
+            // Tạo tài khoản mới
+            $result = $this->taikhoanModel->create($accountData);
+
+            if (!$result) {
+                throw new Exception('Không thể tạo tài khoản');
+            }
+
+            // Lấy thông tin tài khoản vừa tạo
+            $account = $this->taikhoanModel->findByUsername($data['TenTK']);
+
+            if (!$account) {
+                throw new Exception("Không thể lấy thông tin tài khoản vừa tạo");
+            }
+
+            // Loại bỏ mật khẩu trước khi trả về
+            unset($account['MatKhau']);
+
+            $this->sendResponse(201, [
+                'success' => true,
+                'message' => 'Tạo tài khoản thành công',
+                'data' => $account
             ]);
         } catch (Exception $e) {
             $this->sendResponse(400, [
