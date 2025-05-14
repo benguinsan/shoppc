@@ -1,16 +1,22 @@
 <?php
 require_once './models/BaoHanh.php';
+require_once './Middleware/AuthMiddleware.php';
 
 class BaoHanhController {
     private $baoHanhModel;
+    private $authMiddleware;
 
     public function __construct() {
         $this->baoHanhModel = new BaoHanh();
+        $this->authMiddleware = new AuthMiddleware();
     }
 
     // Lấy tất cả thông tin bảo hành
     public function getAllWarranties() {
         try {
+            // Xác thực người dùng
+            $this->authMiddleware->authenticate();
+            
             // Lấy tham số query từ request
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
@@ -44,6 +50,9 @@ class BaoHanhController {
     // Lấy thông tin bảo hành theo ID
     public function getWarrantyById($id) {
         try {
+            // Xác thực người dùng
+            $this->authMiddleware->authenticate();
+            
             $result = $this->baoHanhModel->getById($id);
             $num = $result->rowCount();
 
@@ -76,6 +85,9 @@ class BaoHanhController {
     // Lấy thông tin bảo hành theo số seri
     public function getWarrantyBySerialNumber() {
         try {
+            // Xác thực người dùng
+            $this->authMiddleware->authenticate();
+            
             // Lấy số seri từ request
             $serialNumber = $_GET['serial_number'] ?? null;
             
@@ -117,6 +129,9 @@ class BaoHanhController {
     // Lấy thông tin bảo hành theo mã hóa đơn
     public function getWarrantiesByInvoiceId($invoiceId) {
         try {
+            // Xác thực người dùng
+            $this->authMiddleware->authenticate();
+            
             $result = $this->baoHanhModel->getByInvoiceId($invoiceId);
             $num = $result->rowCount();
 
@@ -320,6 +335,9 @@ class BaoHanhController {
     // Tạo thông tin bảo hành mới
     public function createWarranty() {
         try {
+            // Xác thực người dùng
+            $userData = $this->authMiddleware->authenticate();
+            
             // Lấy dữ liệu từ request
             $data = json_decode(file_get_contents("php://input"));
             
@@ -356,9 +374,12 @@ class BaoHanhController {
             $this->baoHanhModel->MoTa = $data->MoTa ?? '';
             $this->baoHanhModel->TrangThai = $data->TrangThai ?? 1; // Mặc định là Chờ xử lý
             
-            // Thêm MaTK nếu có
+            // Thêm MaTK từ người dùng đã xác thực
             if(isset($data->MaTK)) {
                 $this->baoHanhModel->MaTK = $data->MaTK;
+            } else {
+                // Sử dụng MaTK từ token nếu không được cung cấp
+                $this->baoHanhModel->MaTK = $userData['MaTK'];
             }
             
             // Tạo bảo hành
@@ -390,6 +411,9 @@ class BaoHanhController {
     // Cập nhật thông tin bảo hành
     public function updateWarranty($id) {
         try {
+            // Xác thực người dùng
+            $userData = $this->authMiddleware->authenticate();
+            
             // Kiểm tra bảo hành tồn tại hay không
             $result = $this->baoHanhModel->getById($id);
             if($result->rowCount() == 0) {
@@ -428,9 +452,12 @@ class BaoHanhController {
                 $this->baoHanhModel->TrangThai = $data->TrangThai;
             }
             
-            // Thêm MaTK nếu có
+            // Thêm MaTK từ người dùng đã xác thực
             if(isset($data->MaTK)) {
                 $this->baoHanhModel->MaTK = $data->MaTK;
+            } else {
+                // Sử dụng MaTK từ token nếu không được cung cấp
+                $this->baoHanhModel->MaTK = $userData['MaTK'];
             }
             
             // Cập nhật bảo hành
@@ -459,6 +486,9 @@ class BaoHanhController {
     // Xóa thông tin bảo hành
     public function deleteWarranty($id) {
         try {
+            // Xác thực người dùng
+            $this->authMiddleware->authenticate();
+            
             // Kiểm tra bảo hành tồn tại
             $existingWarranty = $this->baoHanhModel->getById($id);
             if ($existingWarranty->rowCount() == 0) {
@@ -485,6 +515,9 @@ class BaoHanhController {
     // Lấy bảo hành theo trạng thái
     public function getWarrantiesByStatus() {
         try {
+            // Xác thực người dùng
+            $this->authMiddleware->authenticate();
+            
             // Lấy trạng thái từ request
             $status = isset($_GET['status']) ? (int)$_GET['status'] : null;
             
@@ -533,6 +566,9 @@ class BaoHanhController {
     // Cập nhật trạng thái bảo hành
     public function updateWarrantyStatus($id) {
         try {
+            // Xác thực người dùng
+            $userData = $this->authMiddleware->authenticate();
+            
             // Kiểm tra bảo hành có tồn tại không
             $result = $this->baoHanhModel->getById($id);
             if($result->rowCount() == 0) {
@@ -571,6 +607,44 @@ class BaoHanhController {
             
             // Cập nhật trạng thái
             $result = $this->baoHanhModel->updateStatus($id, $data->TrangThai, $ngayTraBaoHanh, $moTa);
+            
+            http_response_code(200);
+            echo json_encode($result);
+            
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Lỗi server: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    // Xóa mềm bảo hành (cập nhật trạng thái về 0 - Đã hủy)
+    public function softDeleteWarranty($id) {
+        try {
+            // Xác thực người dùng
+            $userData = $this->authMiddleware->authenticate();
+            
+            // Kiểm tra bảo hành có tồn tại không
+            $result = $this->baoHanhModel->getById($id);
+            if($result->rowCount() == 0) {
+                http_response_code(404);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Không tìm thấy thông tin bảo hành với mã ' . $id
+                ]);
+                return;
+            }
+            
+            // Lấy dữ liệu từ request
+            $data = json_decode(file_get_contents("php://input"));
+            
+            // Lấy mô tả lý do hủy nếu có
+            $moTa = isset($data->MoTa) ? $data->MoTa : null;
+            
+            // Gọi phương thức softDelete từ model
+            $result = $this->baoHanhModel->softDelete($id, $moTa);
             
             http_response_code(200);
             echo json_encode($result);

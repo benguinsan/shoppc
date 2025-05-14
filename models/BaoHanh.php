@@ -425,5 +425,48 @@ class BaoHanh {
             throw new Exception("Không thể cập nhật trạng thái bảo hành: " . $e->getMessage());
         }
     }
+
+    // Soft delete a warranty (update status to 0 - Đã hủy)
+    public function softDelete($maBH, $moTa = null) {
+        try {
+            // Xây dựng câu query
+            $query = "UPDATE " . $this->table . " SET TrangThai = 0";
+            $params = [
+                ':MaBH' => $maBH
+            ];
+            
+            // Nếu có mô tả về lý do hủy, cập nhật thêm mô tả
+            if ($moTa !== null) {
+                $query .= ", MoTa = :MoTa";
+                $params[':MoTa'] = htmlspecialchars(strip_tags($moTa));
+            }
+            
+            // Hoàn thiện câu query
+            $query .= " WHERE MaBH = :MaBH";
+            
+            // Chuẩn bị và thực thi câu lệnh
+            $stmt = $this->conn->prepare($query);
+            
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            
+            if ($stmt->execute()) {
+                return [
+                    'success' => true,
+                    'message' => 'Hủy bảo hành thành công'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Không thể hủy bảo hành'
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Lỗi khi hủy bảo hành: " . $e->getMessage());
+            throw new Exception("Không thể hủy bảo hành: " . $e->getMessage());
+        }
+    }
 }
 ?>
