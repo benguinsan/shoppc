@@ -76,4 +76,23 @@ class SeriSanPham {
             'SoSeri' => $soSeri
         ];
     }
+
+    // Lấy seri còn trống (TrangThai = 0) theo MaSP, trả về 1 bản ghi đầu tiên hoặc null
+    public function getSeriConTrongByMaSP($maSP) {
+        $query = "SELECT * FROM $this->table_name WHERE MaSP = :maSP AND TrangThai = 0 LIMIT 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":maSP", $maSP);
+        $stmt->execute();
+        $seri = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $seri ? $seri : null;
+    }
+
+    // Cập nhật trạng thái seri theo MaSeri
+    public function updateTrangThaiSeriByMaSeri($maSeri, $trangThai) {
+        $query = "UPDATE $this->table_name SET TrangThai = :trangThai WHERE MaSeri = :maSeri";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":trangThai", $trangThai, PDO::PARAM_INT);
+        $stmt->bindParam(":maSeri", $maSeri);
+        return $stmt->execute();
+    }
 }

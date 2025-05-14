@@ -3,7 +3,7 @@ class VNPayController {
     private $vnp_TmnCode = "T6XL9LZ8";
     private $vnp_HashSecret = "48F6SYYVPTNZ7K6AGBSSBO69EKOVJCJ9";
     private $vnp_Url = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-    private $vnp_ReturnUrl = "https://414e-2001-ee0-4fb0-7320-f0cd-d9d-a3a5-f0d1.ngrok-free.app/payment/vnpay_return";
+    private $vnp_ReturnUrl = "http://localhost:5173/success";
 
     public function createPayment() {
         // Nhận dữ liệu từ frontend
