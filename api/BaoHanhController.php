@@ -290,5 +290,42 @@ class BaoHanhController {
             echo json_encode(['error' => 'Lỗi server: ' . $e->getMessage()]);
         }
     }
+
+    public function searchWarranties() {
+        try {
+            $search = $_GET['search'] ?? '';
+            $result = $this->baoHanhModel->search($search);
+            $num = $result->rowCount();
+
+            if ($num > 0) {
+                $warranties_arr = array();
+                $warranties_arr['data'] = array();
+
+                while($row = $result->fetch(PDO::FETCH_ASSOC)) {
+                    extract($row);
+
+                    $warranty_item = array(
+                        'MaBH' => $MaBH,
+                        'MaHD' => $MaHD,
+                        'MaSeri' => $MaSeri,
+                        'NgayMua' => $NgayMua,
+                        'HanBaoHanh' => $HanBaoHanh,
+                        'MoTa' => $MoTa
+                    );
+
+                    array_push($warranties_arr['data'], $warranty_item);
+                }
+
+                http_response_code(200);
+                echo json_encode($warranties_arr);
+            } else {
+                http_response_code(404);
+                echo json_encode(['message' => 'Không tìm thấy thông tin bảo hành nào']);
+            }
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Lỗi server: ' . $e->getMessage()]);
+        }
+    }
 }
 ?>
