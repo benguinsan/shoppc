@@ -202,6 +202,29 @@ class HoaDon {
             throw new Exception("Không thể lấy thông tin người dùng từ tài khoản: " . $e->getMessage());
         }
     }
+    
+    public function getMaNhanVienFromMaTK($maTK) {
+        if ($this->conn === null) {
+            throw new Exception("Kết nối database không khả dụng");
+        }
+
+        try {
+            $query = "SELECT MaNguoiDung FROM " . $this->table_name_taikhoan . " WHERE MaTK = :MaTK";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaTK", $maTK);
+            $stmt->execute();
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                return $result['MaNguoiDung'];
+            } else {
+                return null;
+            }
+        } catch (PDOException $e) {
+            error_log("Lỗi lấy MaNhanVien từ MaTK: " . $e->getMessage());
+            throw new Exception("Không thể lấy thông tin nhân viên từ tài khoản: " . $e->getMessage());
+        }
+    }
 
     public function create($data) {
         if ($this->conn === null) {
@@ -380,6 +403,41 @@ class HoaDon {
             
             if ($invoiceCount == 0) {
                 throw new Exception("Hóa đơn với mã {$maHD} không tồn tại.");
+            }
+            
+            // Nếu có MaTK, dùng trực tiếp làm MaNhanVien (nếu MaTK chứa MaNguoiDung)
+            if (isset($data['MaTK'])) {
+                // Kiểm tra xem MaTK có hợp lệ (có chứa MaNguoiDung) không
+                if (preg_match('/^(ND[a-f0-9]+)$/', $data['MaTK'])) {
+                    // MaTK đã là MaNguoiDung, dùng trực tiếp
+                    $data['MaNhanVien'] = $data['MaTK'];
+                } else {
+                    // Nếu không, thử lấy MaNguoiDung từ bảng taikhoan
+                    $maNhanVien = $this->getMaNhanVienFromMaTK($data['MaTK']);
+                    if ($maNhanVien === null) {
+                        throw new Exception("Không tìm thấy nhân viên với mã tài khoản {$data['MaTK']}.");
+                    }
+                    $data['MaNhanVien'] = $maNhanVien;
+                }
+                // Xóa MaTK khỏi data vì không lưu vào DB
+                unset($data['MaTK']);
+            }
+            
+            // Vẫn hỗ trợ MaTK_NhanVien để tương thích
+            if (isset($data['MaTK_NhanVien'])) {
+                if (preg_match('/^(ND[a-f0-9]+)$/', $data['MaTK_NhanVien'])) {
+                    // MaTK_NhanVien đã là MaNguoiDung, dùng trực tiếp
+                    $data['MaNhanVien'] = $data['MaTK_NhanVien'];
+                } else {
+                    // Nếu không, thử lấy MaNguoiDung từ bảng taikhoan
+                    $maNhanVien = $this->getMaNhanVienFromMaTK($data['MaTK_NhanVien']);
+                    if ($maNhanVien === null) {
+                        throw new Exception("Không tìm thấy nhân viên với mã tài khoản {$data['MaTK_NhanVien']}.");
+                    }
+                    $data['MaNhanVien'] = $maNhanVien;
+                }
+                // Xóa MaTK_NhanVien khỏi data
+                unset($data['MaTK_NhanVien']);
             }
             
             // Kiểm tra người dùng có tồn tại không
