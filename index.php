@@ -507,8 +507,6 @@ switch ($apiPath) {
     case '/baohanh':
         if ($requestMethod === 'GET') {
             $baoHanhController->getAllWarranties();
-        } else if ($requestMethod === 'POST') {
-            $baoHanhController->createWarranty();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -536,6 +534,15 @@ switch ($apiPath) {
     case '/baohanh/check-eligibility':
         if ($requestMethod === 'GET') {
             $baoHanhController->checkEligibility();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+        
+    case '/baohanh/check-by-invoice-serial':
+        if ($requestMethod === 'GET') {
+            $baoHanhController->checkWarrantyByInvoiceAndSerial();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -594,6 +601,8 @@ switch ($apiPath) {
     case '/api/baohanh':
         if ($requestMethod === 'GET') {
             $baoHanhController->getAllWarranties();
+        } else if ($requestMethod === 'POST') {
+            $baoHanhController->createWarranty();
         } else {
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);

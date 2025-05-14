@@ -657,5 +657,111 @@ class BaoHanhController {
             ]);
         }
     }
+
+    // Kiểm tra bảo hành theo mã hóa đơn và mã seri
+    public function checkWarrantyByInvoiceAndSerial() {
+        try {
+            $userData = $this->authMiddleware->authenticate();
+            // Lấy thông tin từ request
+            $maHD = $_GET['invoice_id'] ?? null;
+            $maSeri = $_GET['serial_number'] ?? null;
+            
+            // Kiểm tra dữ liệu bắt buộc
+            if (!$maHD || !$maSeri) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Mã hóa đơn và số seri sản phẩm là bắt buộc']);
+                return;
+            }
+            
+            // Kết nối database
+            $db = new Database();
+            $conn = $db->getConnection();
+            
+            // Kiểm tra xem mã seri có thuộc hóa đơn không
+            $checkQuery = "SELECT cthd.MaSeri, hd.NgayLap, sp.MaSP, sp.TenSP, sp.tg_baohanh
+                          FROM chitiethoadon cthd
+                          JOIN hoadon hd ON cthd.MaHD = hd.MaHD
+                          JOIN serisanpham ssp ON cthd.MaSeri = ssp.MaSeri
+                          JOIN sanpham sp ON ssp.MaSP = sp.MaSP
+                          WHERE cthd.MaHD = :MaHD AND cthd.MaSeri = :MaSeri";
+                          
+            $checkStmt = $conn->prepare($checkQuery);
+            $checkStmt->bindParam(':MaHD', $maHD);
+            $checkStmt->bindParam(':MaSeri', $maSeri);
+            $checkStmt->execute();
+            
+            if ($checkStmt->rowCount() == 0) {
+                http_response_code(404);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Không tìm thấy sản phẩm với mã seri ' . $maSeri . ' trong hóa đơn ' . $maHD
+                ]);
+                return;
+            }
+            
+            $productData = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            $ngayMua = $productData['NgayLap'];
+            $tgBaoHanh = $productData['tg_baohanh'];
+            $tenSP = $productData['TenSP'];
+            $maSP = $productData['MaSP'];
+            
+            // Kiểm tra sản phẩm đã được bảo hành trước đó chưa
+            $existingWarrantyQuery = "SELECT COUNT(*) as count FROM baohanh WHERE MaSeri = :MaSeri";
+            $existingWarrantyStmt = $conn->prepare($existingWarrantyQuery);
+            $existingWarrantyStmt->bindParam(':MaSeri', $maSeri);
+            $existingWarrantyStmt->execute();
+            $existingWarrantyCount = $existingWarrantyStmt->fetch(PDO::FETCH_ASSOC)['count'];
+            
+            // Tính ngày hết hạn bảo hành
+            $ngayMuaObj = new DateTime($ngayMua);
+            $ngayHetHan = clone $ngayMuaObj;
+            $ngayHetHan->add(new DateInterval('P' . $tgBaoHanh . 'M')); // Thêm số tháng bảo hành
+            
+            $ngayHienTai = new DateTime();
+            
+            // Kiểm tra còn trong thời gian bảo hành không
+            if ($ngayHienTai > $ngayHetHan) {
+                http_response_code(200);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Sản phẩm đã hết thời gian bảo hành',
+                    'data' => [
+                        'MaHD' => $maHD,
+                        'MaSP' => $maSP,
+                        'TenSP' => $tenSP,
+                        'MaSeri' => $maSeri,
+                        'NgayMua' => $ngayMua,
+                        'ThoiGianBaoHanh' => $tgBaoHanh . ' tháng',
+                        'NgayHetHan' => $ngayHetHan->format('Y-m-d'),
+                        'ConHieuLuc' => false
+                    ]
+                ]);
+                return;
+            }
+            
+            // Còn thời hạn bảo hành
+            http_response_code(200);
+            echo json_encode([
+                'success' => true,
+                'message' => 'Sản phẩm còn trong thời gian bảo hành',
+                'data' => [
+                    'MaHD' => $maHD,
+                    'MaSP' => $maSP,
+                    'TenSP' => $tenSP,
+                    'MaSeri' => $maSeri,
+                    'NgayMua' => $ngayMua,
+                    'ThoiGianBaoHanh' => $tgBaoHanh . ' tháng',
+                    'NgayHetHan' => $ngayHetHan->format('Y-m-d'),
+                    'ConHieuLuc' => true,
+                    'DaGuiBaoHanh' => $existingWarrantyCount > 0,
+                    'SoNgayConLai' => $ngayHienTai->diff($ngayHetHan)->days
+                ]
+            ]);
+            
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Lỗi server: ' . $e->getMessage()]);
+        }
+    }
 }
 ?>
