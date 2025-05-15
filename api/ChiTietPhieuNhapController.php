@@ -127,4 +127,75 @@ class ChiTietPhieuNhapController {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
     }
+
+    /**
+     * Cập nhật chi tiết phiếu nhập
+     */
+    public function update($maCTPN) {
+        try {
+            $this->authMiddleware->authenticate();
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!$data) {
+                throw new Exception("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
+            }
+            
+            // Kiểm tra các trường dữ liệu
+            $this->validateUpdateData($data);
+            
+            // Lấy chi tiết phiếu nhập hiện tại
+            $currentDetail = $this->chiTietPhieuNhapModel->getByMaCTPN($maCTPN);
+            
+            if (!$currentDetail) {
+                throw new Exception("Không tìm thấy chi tiết phiếu nhập với mã {$maCTPN}");
+            }
+            
+            // Gán mã phiếu nhập vào dữ liệu nếu chưa có
+            if (!isset($data['MaPhieuNhap'])) {
+                $data['MaPhieuNhap'] = $currentDetail['MaPhieuNhap'];
+            }
+            
+            // Gọi hàm update từ model
+            $result = $this->chiTietPhieuNhapModel->update($maCTPN, $data);
+            
+            // Cập nhật lại tổng tiền phiếu nhập nếu có thay đổi số lượng hoặc đơn giá
+            if ($result['affected_rows'] > 0 && (isset($data['SoLuong']) || isset($data['DonGia']))) {
+                $this->phieuNhapModel->updateTongTien($data['MaPhieuNhap']);
+            }
+            
+            http_response_code(200);
+            echo json_encode([
+                'status' => 'success',
+                'data' => [
+                    'MaCTPN' => $result['id'],
+                    'message' => $result['message'],
+                    'affected_rows' => $result['affected_rows']
+                ]
+            ]);
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Kiểm tra dữ liệu cập nhật
+     */
+    private function validateUpdateData($data) {
+        // Kiểm tra số lượng
+        if (isset($data['SoLuong'])) {
+            if (!is_numeric($data['SoLuong']) || (int)$data['SoLuong'] <= 0) {
+                throw new Exception("Số lượng phải là số dương.");
+            }
+        }
+        
+        // Kiểm tra đơn giá
+        if (isset($data['DonGia'])) {
+            if (!is_numeric($data['DonGia']) || (float)$data['DonGia'] <= 0) {
+                throw new Exception("Đơn giá phải là số dương.");
+            }
+        }
+    }
 } 

@@ -55,8 +55,10 @@ class PhieuNhapController {
             $formattedRecords = array_map(function($record) {
                 return [
                     'MaPN' => $record['MaPhieuNhap'],
-                    'MaNhaCungCap' => $record['MaNCC'],
+                    'MaNCC' => $record['MaNCC'],
                     'TenNhaCungCap' => $record['TenNhaCungCap'],
+                    'MaNhanVien' => $record['MaNhanVien'],
+                    'TenNhanVien' => $record['TenNhanVien'],
                     'NgayNhap' => $record['NgayNhap'],
                     'TongTien' => (float)$record['TongTien'],
                     'TrangThai' => (int)$record['TrangThai'],
@@ -142,4 +144,51 @@ class PhieuNhapController {
         }
     }
 
+    /**
+     * Cập nhật phiếu nhập
+     */
+    public function update($maPhieuNhap) {
+        try {
+            $this->authMiddleware->authenticate();
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!$data) {
+                throw new Exception("Dữ liệu không hợp lệ.");
+            }
+            // Chỉ lấy các trường cho phép cập nhật
+            $allowedFields = ['MaNCC', 'MaNhanVien', 'NgayNhap', 'TongTien', 'TrangThai'];
+            $updateData = [];
+            foreach ($allowedFields as $field) {
+                if (isset($data[$field])) {
+                    $updateData[$field] = $data[$field];
+                }
+            }
+            if (empty($updateData)) {
+                throw new Exception("Không có trường hợp lệ để cập nhật.");
+            }
+            $result = $this->phieuNhapModel->update($maPhieuNhap, $updateData);
+            http_response_code(200);
+            echo json_encode(['status' => 'success', 'data' => $result]);
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Cập nhật tổng tiền của phiếu nhập
+     */
+    public function updateTongTien($maPhieuNhap) {
+        try {
+            $this->authMiddleware->authenticate();
+            
+            // Gọi model để cập nhật tổng tiền
+            $result = $this->phieuNhapModel->updateTongTien($maPhieuNhap);
+            
+            http_response_code(200);
+            echo json_encode(['status' => 'success', 'data' => $result]);
+        } catch(Exception $e) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
 }

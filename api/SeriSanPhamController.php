@@ -38,13 +38,15 @@ class SeriSanPhamController {
         try {
             $this->authMiddleware->authenticate();
             $input = json_decode(file_get_contents('php://input'), true);
-            $maSP = $input['MaSP'] ?? null;
-            $trangThai = $input['TrangThai'] ?? 2;
+            $maSP = $input['maSP'] ?? $input['MaSP'] ?? null;
+            $trangThai = $input['trangThai'] ?? $input['TrangThai'] ?? 2;
+            
             if (!$maSP) {
                 http_response_code(400);
                 echo json_encode(['status' => 'error', 'message' => 'Thiếu MaSP']);
                 return;
             }
+            
             $result = $this->seriSanPhamModel->createSeri($maSP, $trangThai);
             http_response_code(201);
             echo json_encode(['status' => 'success', 'data' => $result]);

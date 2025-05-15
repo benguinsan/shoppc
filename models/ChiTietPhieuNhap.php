@@ -49,6 +49,31 @@ class ChiTietPhieuNhap {
         }
     }
 
+    public function getByMaCTPN($maCTPN) {
+        if ($this->conn === null) {
+            throw new Exception("Kết nối database không khả dụng");
+        }
+
+        try {
+            $query = "SELECT ctpn.*, sp.TenSP, pn.NgayNhap 
+                     FROM " . $this->table_name . " ctpn
+                     LEFT JOIN sanpham sp ON ctpn.MaSP = sp.MaSP
+                     LEFT JOIN phieunhap pn ON ctpn.MaPhieuNhap = pn.MaPhieuNhap
+                     WHERE ctpn.MaCTPN = :MaCTPN";
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaCTPN", $maCTPN);
+            $stmt->execute();
+
+            $chiTiet = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $chiTiet;
+        } catch (PDOException $e) {
+            error_log("Lỗi lấy chi tiết phiếu nhập: " . $e->getMessage());
+            throw new Exception("Không thể lấy chi tiết phiếu nhập: " . $e->getMessage());
+        }
+    }
+
     public function getAll() {
         if ($this->conn === null) {
             throw new Exception("Kết nối database không khả dụng");
@@ -167,50 +192,97 @@ class ChiTietPhieuNhap {
             throw new Exception("Kết nối database không khả dụng");
         }
         try {
-            $fields = [];
-            $params = [":MaCTPN" => $maCTPN];
-            if (isset($data['MaSP'])) {
-                $fields[] = "MaSP = :MaSP";
-                $params[":MaSP"] = $data['MaSP'];
+            // Kiểm tra chi tiết phiếu nhập có tồn tại không
+            $checkQuery = "SELECT COUNT(*) as count FROM " . $this->table_name . " WHERE MaCTPN = :MaCTPN";
+            $checkStmt = $this->conn->prepare($checkQuery);
+            $checkStmt->bindParam(":MaCTPN", $maCTPN);
+            $checkStmt->execute();
+            $count = $checkStmt->fetch(PDO::FETCH_ASSOC)['count'];
+            if ($count == 0) {
+                throw new Exception("Chi tiết phiếu nhập với mã {$maCTPN} không tồn tại.");
             }
-            if (isset($data['SoLuong'])) {
-                $fields[] = "SoLuong = :SoLuong";
-                $params[":SoLuong"] = $data['SoLuong'];
+
+            // Bắt đầu transaction
+            $this->conn->beginTransaction();
+            
+            // Lưu giá trị cũ để cập nhật tổng tiền sau
+            $oldValueQuery = "SELECT MaPhieuNhap, ThanhTien FROM " . $this->table_name . " WHERE MaCTPN = :MaCTPN";
+            $oldValueStmt = $this->conn->prepare($oldValueQuery);
+            $oldValueStmt->bindParam(":MaCTPN", $maCTPN);
+            $oldValueStmt->execute();
+            $oldValue = $oldValueStmt->fetch(PDO::FETCH_ASSOC);
+            $oldThanhTien = $oldValue['ThanhTien'];
+            $maPhieuNhap = $oldValue['MaPhieuNhap'];
+
+            // Các trường cho phép cập nhật
+            $allowedFields = ['MaSP', 'SoLuong', 'DonGia'];
+            $setClause = [];
+            $params = [':MaCTPN' => $maCTPN];
+            
+            foreach ($allowedFields as $field) {
+                if (isset($data[$field])) {
+                    $setClause[] = "$field = :$field";
+                    $params[":$field"] = $data[$field];
+                }
             }
-            if (isset($data['DonGia'])) {
-                $fields[] = "DonGia = :DonGia";
-                $params[":DonGia"] = $data['DonGia'];
-            }
+            
             // Nếu có SoLuong hoặc DonGia thì cập nhật lại ThanhTien
             if (isset($data['SoLuong']) || isset($data['DonGia'])) {
                 $soLuong = isset($data['SoLuong']) ? $data['SoLuong'] : null;
                 $donGia = isset($data['DonGia']) ? $data['DonGia'] : null;
+                
                 // Lấy giá trị hiện tại nếu chưa truyền vào
-                $query = "SELECT SoLuong, DonGia FROM " . $this->table_name . " WHERE MaCTPN = :MaCTPN";
-                $stmt = $this->conn->prepare($query);
-                $stmt->bindParam(":MaCTPN", $maCTPN);
-                $stmt->execute();
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($soLuong === null) $soLuong = $row['SoLuong'];
-                if ($donGia === null) $donGia = $row['DonGia'];
-                $fields[] = "ThanhTien = :ThanhTien";
-                $params[":ThanhTien"] = $soLuong * $donGia;
+                if ($soLuong === null || $donGia === null) {
+                    $currentQuery = "SELECT SoLuong, DonGia FROM " . $this->table_name . " WHERE MaCTPN = :MaCTPN";
+                    $currentStmt = $this->conn->prepare($currentQuery);
+                    $currentStmt->bindParam(":MaCTPN", $maCTPN);
+                    $currentStmt->execute();
+                    $currentRow = $currentStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($soLuong === null) $soLuong = $currentRow['SoLuong'];
+                    if ($donGia === null) $donGia = $currentRow['DonGia'];
+                }
+                
+                $thanhTien = $soLuong * $donGia;
+                $setClause[] = "ThanhTien = :ThanhTien";
+                $params[":ThanhTien"] = $thanhTien;
             }
-            if (empty($fields)) {
-                throw new Exception("Không có trường nào để cập nhật.");
+            
+            if (empty($setClause)) {
+                throw new Exception("Không có thông tin nào được cập nhật.");
             }
-            $sql = "UPDATE " . $this->table_name . " SET " . implode(", ", $fields) . " WHERE MaCTPN = :MaCTPN";
-            $stmt = $this->conn->prepare($sql);
+            
+            // Cập nhật chi tiết phiếu nhập
+            $query = "UPDATE " . $this->table_name . " SET " . implode(", ", $setClause) . " WHERE MaCTPN = :MaCTPN";
+            $stmt = $this->conn->prepare($query);
             foreach ($params as $key => $value) {
                 $stmt->bindValue($key, $value);
             }
             $stmt->execute();
+            
+            // Cập nhật lại tổng tiền cho phiếu nhập 
+            if (isset($params[":ThanhTien"])) {
+                $newThanhTien = $params[":ThanhTien"];
+                $diffThanhTien = $newThanhTien - $oldThanhTien;
+                
+                $updateTotalQuery = "UPDATE phieunhap SET TongTien = TongTien + :DiffThanhTien WHERE MaPhieuNhap = :MaPhieuNhap";
+                $updateTotalStmt = $this->conn->prepare($updateTotalQuery);
+                $updateTotalStmt->bindParam(":DiffThanhTien", $diffThanhTien);
+                $updateTotalStmt->bindParam(":MaPhieuNhap", $maPhieuNhap);
+                $updateTotalStmt->execute();
+            }
+            
+            $this->conn->commit();
+            
             return [
                 'id' => $maCTPN,
                 'message' => 'Cập nhật chi tiết phiếu nhập thành công',
                 'affected_rows' => $stmt->rowCount()
             ];
         } catch (PDOException $e) {
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
             error_log("Lỗi cập nhật chi tiết phiếu nhập: " . $e->getMessage());
             throw new Exception("Không thể cập nhật chi tiết phiếu nhập: " . $e->getMessage());
         }

@@ -475,6 +475,28 @@ switch ($apiPath) {
         }
         break;
 
+    case (preg_match('#^/phieunhap/update/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maPhieuNhap = $matches[1];
+        $phieuNhapController = new PhieuNhapController();
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $phieuNhapController->update($maPhieuNhap);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
+    case (preg_match('#^/phieunhap/([^/]+)/updateTongTien$#', $apiPath, $matches) ? true : false):
+        $maPhieuNhap = $matches[1];
+        $phieuNhapController = new PhieuNhapController();
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $phieuNhapController->updateTongTien($maPhieuNhap);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+
     // NHÂN VIÊN ROUTES
     case '/phieunhap/nhanvien':
         if ($requestMethod === 'GET') {
@@ -496,26 +518,37 @@ switch ($apiPath) {
         }
         break;
 
-        case (preg_match('#^/chitietphieunhap/([^/]+)$#', $apiPath, $matches) ? true : false):
-            $maPhieuNhap = $matches[1];
-            if ($requestMethod === 'GET') {
-                $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
-                $chiTietPhieuNhapController->getByMaPhieuNhap($maPhieuNhap);
-            } else {
-                http_response_code(405);
-                echo json_encode(['error' => 'Method not allowed']);
-            }
-            break;
+    case (preg_match('#^/chitietphieunhap/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maPhieuNhap = $matches[1];
+        if ($requestMethod === 'GET') {
+            $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
+            $chiTietPhieuNhapController->getByMaPhieuNhap($maPhieuNhap);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
+    
+    case (preg_match('#^/chitietphieunhap/update/([^/]+)$#', $apiPath, $matches) ? true : false):
+        $maCTPN = $matches[1];
+        if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+            $chiTietPhieuNhapController = new ChiTietPhieuNhapController();
+            $chiTietPhieuNhapController->update($maCTPN);
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
         
-        case '/seri/create':
-            if ($requestMethod === 'POST') {
-                $seriSanPhamController = new SeriSanPhamController();
-                $seriSanPhamController->createSeri();
-            } else {
-                http_response_code(405);
-                echo json_encode(['error' => 'Method not allowed']);
-            }
-            break;
+    case '/seri/create':
+        if ($requestMethod === 'POST') {
+            $seriSanPhamController = new SeriSanPhamController();
+            $seriSanPhamController->createSeri();
+        } else {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+        }
+        break;
 
     // case '/chitietphieunhap/create':
     case '/chitietphieunhap/create/':

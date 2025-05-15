@@ -217,4 +217,102 @@ class PhieuNhap {
             ];
         }
     }
+
+    // Thêm hàm cập nhật phiếu nhập
+    public function update($maPhieuNhap, $data) {
+        if ($this->conn === null) {
+            throw new Exception("Kết nối database không khả dụng");
+        }
+        try {
+            // Kiểm tra phiếu nhập có tồn tại không
+            $checkQuery = "SELECT COUNT(*) as count FROM " . $this->table_name . " WHERE MaPhieuNhap = :MaPhieuNhap";
+            $checkStmt = $this->conn->prepare($checkQuery);
+            $checkStmt->bindParam(":MaPhieuNhap", $maPhieuNhap);
+            $checkStmt->execute();
+            $count = $checkStmt->fetch(PDO::FETCH_ASSOC)['count'];
+            if ($count == 0) {
+                throw new Exception("Phiếu nhập với mã {$maPhieuNhap} không tồn tại.");
+            }
+
+            // Bắt đầu transaction
+            $this->conn->beginTransaction();
+
+            // Các trường cho phép cập nhật
+            $allowedFields = ['MaNCC', 'MaNhanVien', 'NgayNhap', 'TongTien', 'TrangThai'];
+            $setClause = [];
+            $params = [':MaPhieuNhap' => $maPhieuNhap];
+            foreach ($allowedFields as $field) {
+                if (isset($data[$field])) {
+                    $setClause[] = "$field = :$field";
+                    $params[":$field"] = $data[$field];
+                }
+            }
+            if (empty($setClause)) {
+                throw new Exception("Không có thông tin nào được cập nhật.");
+            }
+            $query = "UPDATE " . $this->table_name . " SET " . implode(", ", $setClause) . " WHERE MaPhieuNhap = :MaPhieuNhap";
+            $stmt = $this->conn->prepare($query);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->execute();
+            $this->conn->commit();
+            return [
+                'id' => $maPhieuNhap,
+                'message' => 'Cập nhật phiếu nhập thành công',
+                'affected_rows' => $stmt->rowCount()
+            ];
+        } catch (PDOException $e) {
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
+            error_log("Lỗi cập nhật phiếu nhập: " . $e->getMessage());
+            throw new Exception("Không thể cập nhật phiếu nhập: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cập nhật tổng tiền của phiếu nhập dựa trên tổng các chi tiết phiếu nhập
+     */
+    public function updateTongTien($maPhieuNhap) {
+        if ($this->conn === null) {
+            throw new Exception("Kết nối database không khả dụng");
+        }
+        try {
+            // Kiểm tra phiếu nhập có tồn tại không
+            $checkQuery = "SELECT COUNT(*) as count FROM " . $this->table_name . " WHERE MaPhieuNhap = :MaPhieuNhap";
+            $checkStmt = $this->conn->prepare($checkQuery);
+            $checkStmt->bindParam(":MaPhieuNhap", $maPhieuNhap);
+            $checkStmt->execute();
+            $count = $checkStmt->fetch(PDO::FETCH_ASSOC)['count'];
+            if ($count == 0) {
+                throw new Exception("Phiếu nhập với mã {$maPhieuNhap} không tồn tại.");
+            }
+
+            // Tính tổng tiền từ các chi tiết phiếu nhập
+            $query = "SELECT SUM(ThanhTien) as TongTien FROM chitietphieunhap WHERE MaPhieuNhap = :MaPhieuNhap";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":MaPhieuNhap", $maPhieuNhap);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $tongTien = $result['TongTien'] ?: 0;
+
+            // Cập nhật tổng tiền cho phiếu nhập
+            $updateQuery = "UPDATE " . $this->table_name . " SET TongTien = :TongTien WHERE MaPhieuNhap = :MaPhieuNhap";
+            $updateStmt = $this->conn->prepare($updateQuery);
+            $updateStmt->bindParam(":TongTien", $tongTien);
+            $updateStmt->bindParam(":MaPhieuNhap", $maPhieuNhap);
+            $updateStmt->execute();
+
+            return [
+                'id' => $maPhieuNhap,
+                'message' => 'Cập nhật tổng tiền phiếu nhập thành công',
+                'affected_rows' => $updateStmt->rowCount(),
+                'TongTien' => $tongTien
+            ];
+        } catch (PDOException $e) {
+            error_log("Lỗi cập nhật tổng tiền phiếu nhập: " . $e->getMessage());
+            throw new Exception("Không thể cập nhật tổng tiền phiếu nhập: " . $e->getMessage());
+        }
+    }
 } 

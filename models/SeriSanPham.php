@@ -15,18 +15,19 @@ class SeriSanPham {
     }
 
     // Hàm random số seri không trùng
-    public function generateUniqueSeri($maSP, $length = 16) {
-        do {
-            $seri = $this->randomSeri($length);
-            $exists = $this->checkSeriExists($seri);
-        } while ($exists);
-        return $seri;
-    }
+    // public function generateUniqueSeri($length = 16) {
+    //     do {
+    //         $seri = $this->randomSeri($length);
+    //         $exists = $this->checkSeriExists($seri);
+    //     } while ($exists);
+    //     return $seri;
+    // }
 
+    // Hàm random mã Seri bắt đầu bằng SR
     private function randomSeri($length = 16) {
         $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        $seri = '';
-        for ($i = 0; $i < $length; $i++) {
+        $seri = 'SR';
+        for ($i = 0; $i < $length - 2; $i++) {
             $seri .= $chars[rand(0, strlen($chars) - 1)];
         }
         return $seri;
@@ -41,7 +42,14 @@ class SeriSanPham {
         return $row['count'] > 0;
     }
 
-
+    public function checkMaSeriExists($maSeri) {
+        $query = "SELECT COUNT(*) as count FROM $this->table_name WHERE MaSeri = :maSeri";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":maSeri", $maSeri);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row['count'] > 0;
+    }
 
     public function countByMaSP($maSP) {
         $query = "SELECT COUNT(*) as count FROM $this->table_name WHERE MaSP = :maSP";
@@ -52,11 +60,11 @@ class SeriSanPham {
         return (int)$row['count'];
     }
 
-    // Hàm tạo mới seri với MaSP, MaSeri và SoSeri đều random
-    public function createSeri($maSP, $trangThai = 1) {
+    // Hàm tạo mới seri với MaSeri và SoSeri tự động tạo
+    public function createSeri($maSP, $trangThai = 2) {
         $maSeri = $this->randomSeri(16); // Random MaSeri
         // Đảm bảo MaSeri không trùng
-        while ($this->checkSeriExists($maSeri)) {
+        while ($this->checkMaSeriExists($maSeri)) {
             $maSeri = $this->randomSeri(16);
         }
         $soSeri = $this->randomSeri(16); // Random SoSeri
